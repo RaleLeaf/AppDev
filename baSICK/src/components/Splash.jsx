@@ -40,7 +40,7 @@ function Test() {
 
   return (
     <div
-      className="h-screen w-screen bg-[#262626] overflow-hidden relative"
+      className="h-screen w-screen bg-[#1a1a1a] overflow-hidden relative"
       onClick={handleClick}
     >
       <img
@@ -49,7 +49,7 @@ function Test() {
         alt="slide"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#262626]"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#1a1a1a]"></div>
 
       <div className="absolute bottom-28 w-full flex flex-col items-center justify-center kanit-bold text-2xl tracking-wide">
       {slides[currentSlide].button && (

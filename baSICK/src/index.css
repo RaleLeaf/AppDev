@@ -9,6 +9,19 @@ html, body {
     height: 100%;
   }
 
+  .michroma-regular {
+    font-family: "Michroma", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  .gothic-regular { 
+    font-family: "Special Gothic Expanded One", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+
   .kanit-thin {
     font-family: "Kanit", sans-serif;
     font-weight: 100;
