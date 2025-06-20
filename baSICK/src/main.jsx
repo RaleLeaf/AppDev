@@ -17,8 +17,11 @@ import Settings from './components/Settings.jsx';
 import FitnessLeaderboard from './components/FitnessLeaderboard.jsx';
 import Appointment from './components/Appointment.jsx';
 import UsersFeed from './components/UsersFeed.jsx';
+import TrainerProfile from './components/TrainerProfile.jsx';
+import ProgressTracker from './components/ProgressTracker.jsx';
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <UserDetails />
+    <ProgressTracker />
   </StrictMode>,
 )
