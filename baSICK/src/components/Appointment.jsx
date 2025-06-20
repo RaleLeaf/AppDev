@@ -1,4 +1,5 @@
 import React from 'react';
+import BottomNav from './BottonNav';
 
 const Appointment = () => {
   // Calendar data
@@ -131,6 +132,7 @@ const Appointment = () => {
           Next
         </button>
       </div>
+      <BottomNav />
     </div>
   );
 };

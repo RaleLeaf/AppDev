@@ -19,9 +19,10 @@ import Appointment from './components/Appointment.jsx';
 import UsersFeed from './components/UsersFeed.jsx';
 import TrainerProfile from './components/TrainerProfile.jsx';
 import ProgressTracker from './components/ProgressTracker.jsx';
+import AIFitnessHelper from './components/AIFitnessHelper.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ProgressTracker />
+    <TrainersList />
   </StrictMode>,
 )
