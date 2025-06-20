@@ -10,10 +10,11 @@ import LoginSignup from './components/loginSignup.jsx';
 import WorkoutCategories from './components/WorkoutCategories.jsx';
 import HomePage from './components/HomePage.jsx';
 import Notifications from './components/Notifications.jsx';
-
+import ExerciseList from './components/ExerciseList.jsx';
+import TrainersList from './components/TrainersList.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <UserDetails />
+    <TrainersList />
   </StrictMode>,
 )
