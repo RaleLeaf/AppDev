@@ -10,10 +10,14 @@ import LoginSignup from './components/loginSignup.jsx';
 import WorkoutCategories from './components/WorkoutCategories.jsx';
 import HomePage from './components/HomePage.jsx';
 import Notifications from './components/Notifications.jsx';
-
-
+import ProfilePage from './components/ProfilePage.jsx';
+import EditProfile from './components/EditProfile.jsx';
+import Settings from './components/Settings.jsx';
+import FitnessLeaderboard from './components/FitnessLeaderboard.jsx';
+import Appointment from './components/Appointment.jsx';
+import UsersFeed from './components/UsersFeed.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <UserDetails />
+    <UsersFeed />
   </StrictMode>,
 )
