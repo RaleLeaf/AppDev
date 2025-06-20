@@ -46,7 +46,7 @@ function UserDetails() {
   const handleBack = () => {
     setStep(prev => prev - 1);
   };
-
+  
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError('');
