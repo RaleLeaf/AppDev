@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import 'tailwindcss/tailwind.css';
 
 const slides = [
@@ -18,6 +19,8 @@ const slides = [
 ];
 
 function Test() {
+  const userDetails = useNavigate();
+
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleNext = () => {
@@ -54,7 +57,9 @@ function Test() {
       <div className="absolute bottom-28 w-full flex flex-col items-center justify-center kanit-bold text-2xl tracking-wide">
       {slides[currentSlide].button && (
           <div className="pt-8">
-            <button className="bg-[#cfff33] mb-7 p-2 w-[150px] rounded-2xl text-black text-lg font-bold">
+            <button 
+            onClick={() => userDetails('/UserDetails')}
+            className="bg-[#cfff33] mb-7 p-2 w-[150px] rounded-2xl text-black text-lg font-bold">
               Start Now
             </button>
           </div>
