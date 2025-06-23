@@ -1,12 +1,24 @@
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    // Clear any stored user data (localStorage, sessionStorage, etc.)
+    // localStorage.removeItem('userToken'); // Example if you have stored tokens
+    // sessionStorage.clear(); // Example if using session storage
+    
+    // Navigate to login page
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header with back button */}
       <div className="p-5 flex items-center">
-        <button className="p-2">
+        <button className="p-2" onClick={() => navigate(-1)}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -65,12 +77,12 @@ const ProfilePage = () => {
       {/* Menu Items */}
       <div className="px-5 flex-1">
         {/* Edit Profile */}
-        <button className="w-full flex justify-between items-center py-3 border-b border-zinc-800">
+        <Link to="/edit-profile" className="w-full flex justify-between items-center py-3 border-b border-zinc-800">
           <span className="kanit-regular">Edit Profile</span>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-zinc-500" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-        </button>
+        </Link>
         
         {/* Privacy Policy */}
         <button className="w-full flex justify-between items-center py-3 border-b border-zinc-800">
@@ -81,18 +93,21 @@ const ProfilePage = () => {
         </button>
         
         {/* Settings */}
-        <button className="w-full flex justify-between items-center py-3 border-b border-zinc-800">
+        <Link to="/settings" className="w-full flex justify-between items-center py-3 border-b border-zinc-800">
           <span className="kanit-regular">Settings</span>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-zinc-500" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-        </button>
+        </Link>
         
         {/* Upgrade to Premium */}
         
         
         {/* Sign Out */}
-        <button className="w-full py-3 text-red-600 text-center kanit-medium">
+        <button 
+          onClick={handleSignOut}
+          className="w-full py-3 text-red-600 text-center kanit-medium"
+        >
           Sign Out
         </button>
       </div>

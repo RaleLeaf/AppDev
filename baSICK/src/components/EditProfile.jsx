@@ -1,12 +1,17 @@
 import React from 'react';
 import BottomNav from './BottonNav';
+import { useNavigate } from 'react-router-dom';
+
+
 
 const EditProfile = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col pb-20">
       {/* Header with back button and title */}
       <div className="p-5 flex items-center">
-        <button className="p-2">
+        <button className="p-2" onClick={() => navigate(-1)}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
