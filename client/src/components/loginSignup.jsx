@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 function loginSignup() {
     
 const [step, setStep] = useState(1);
+const navigate = useNavigate();
 
 const handleNext = () => {
     // setError('');
@@ -11,6 +13,12 @@ const handleNext = () => {
 
 const handleBack = () => {
     setStep(prev => 1);
+};
+
+const handleLogin = () => {
+    // Add your login logic here (validation, API calls, etc.)
+    // For now, just navigate to homepage
+    navigate('/home');
 };
 
   return (
@@ -71,7 +79,11 @@ const handleBack = () => {
         <div className='w-14 h-14 bg-[#333333] rounded-full flex items-center'>
             <img src="google.png" className='p-2' />
         </div>
-        <button className='gothic-regular bg-[#cfff33] rounded-full px-6 ml-12'>LOGIN</button>
+        <button 
+            onClick={handleLogin}
+            className='gothic-regular bg-[#cfff33] rounded-full px-6 ml-12'>
+            LOGIN
+        </button>
       </div>
 
       </>
@@ -138,7 +150,11 @@ const handleBack = () => {
                 <div className='w-14 h-14 bg-[#333333] rounded-full flex items-center'>
                     <img src="google.png" className='p-2' />
                 </div>
-                <button className='gothic-regular bg-[#cfff33] rounded-full px-6 ml-12'>LOGIN</button>
+                <button 
+                    onClick={handleLogin}
+                    className='gothic-regular bg-[#cfff33] rounded-full px-6 ml-12'>
+                    LOGIN
+                </button>
                 </div>
         </>
     )}
@@ -148,4 +164,3 @@ const handleBack = () => {
 }
 
 export default loginSignup;
-

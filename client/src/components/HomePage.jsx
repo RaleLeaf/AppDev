@@ -48,7 +48,7 @@ const HomePage = () => {
       <div className="px-5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-bold kanit-medium">Workout Categories</h2>
-          <a href="#" className="text-lime-500 text-sm kanit-regular">See All</a>
+          <a href="/workout-categories" className="text-lime-500 text-sm kanit-regular">See All</a>
         </div>
         
         {/* Category Pills - Made scrollable */}
@@ -81,7 +81,7 @@ const HomePage = () => {
       <div className="px-5 mb-20">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-bold kanit-medium">Show Leaderboard</h2>
-          <a href="#" className="text-lime-500 text-sm kanit-regular">See All</a>
+          <a href="/leaderboard" className="text-lime-500 text-sm kanit-regular">See All</a>
         </div>
         
         {/* Leaderboard Preview */}
