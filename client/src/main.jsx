@@ -6,7 +6,6 @@ import App from './App.jsx'
 import Test from './components/test.jsx';
 import Splash from './components/Splash.jsx';
 import UserDetails from './components/UserDetails.jsx';
-import LoginSignup from './components/loginSignup.jsx';
 import WorkoutCategories from './components/WorkoutCategories.jsx';
 import HomePage from './components/HomePage.jsx';
 import Notifications from './components/Notifications.jsx';
@@ -21,6 +20,8 @@ import UsersFeed from './components/UsersFeed.jsx';
 import TrainerProfile from './components/TrainerProfile.jsx';
 import ProgressTracker from './components/ProgressTracker.jsx';
 import AIFitnessHelper from './components/AIFitnessHelper.jsx';
+import Login from './components/Login.jsx';
+import Signup from './components/Signup.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -29,11 +30,11 @@ createRoot(document.getElementById('root')).render(
         {/* Splash screen as separate route */}
         <Route path="/splash" element={<Splash />} />
         
-        {/* Login route - first entry point */}
-        <Route path="/login" element={<LoginSignup />} />
-        
+        {/* Login and Signup routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         {/* Default route redirects to login */}
-        <Route path="/" element={<LoginSignup />} />
+        <Route path="/" element={<Login />} />
         
         {/* Main app routes after login */}
         <Route path="/home" element={<HomePage />} />

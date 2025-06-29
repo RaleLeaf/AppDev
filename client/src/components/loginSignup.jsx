@@ -21,6 +21,12 @@ const handleLogin = () => {
     navigate('/home');
 };
 
+const handleSignUp = async (e) => {
+    // For now, just navigate to homepage
+    // Add your sign-up logic here (validation, API calls, etc.)
+    navigate('/home');
+ };
+
   return (
     <div className="h-screen w-screen bg-[#1a1a1a] overflow-hidden relative">
     {step === 1 && (
@@ -80,9 +86,9 @@ const handleLogin = () => {
             <img src="google.png" className='p-2' />
         </div>
         <button 
-            onClick={handleLogin}
+            onClick={handleSignUp}
             className='gothic-regular bg-[#cfff33] rounded-full px-6 ml-12'>
-            LOGIN
+            SIGN UP
         </button>
       </div>
 
