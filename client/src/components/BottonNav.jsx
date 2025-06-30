@@ -26,9 +26,9 @@ function BottomNav() {
 
         {/* Stats/Leaderboard Icon */}
         <button 
-          onClick={() => navigate('/progress')}
+          onClick={() => navigate('/leaderboard')}
           className={`flex flex-col items-center justify-center ${
-            isActive('/progress') ? 'text-[#cfff33]' : 'text-zinc-600'
+            isActive('/leaderboard') ? 'text-[#cfff33]' : 'text-zinc-600'
           }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -38,9 +38,9 @@ function BottomNav() {
 
         {/* Clipboard/Workouts Icon */}
         <button 
-          onClick={() => navigate('/feed')}
+          onClick={() => navigate('/workout-categories')}
           className={`flex flex-col items-center justify-center ${
-            isActive('/feed') ? 'text-[#cfff33]' : 'text-zinc-600'
+            isActive('/workout-categories') ? 'text-[#cfff33]' : 'text-zinc-600'
           }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

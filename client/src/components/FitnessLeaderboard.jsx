@@ -80,25 +80,27 @@ const FitnessLeaderboard = () => {
             </button>
 
             <button
-              onClick={() => navigate('/progress')}
-              className={`flex items-center w-full p-3 rounded-lg group ${isActive('/progress') ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+              onClick={() => navigate('/leaderboard')}
+              className={`flex items-center w-full p-3 rounded-lg group ${isActive('/leaderboard') ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
                 }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span className="kanit-medium">Progress</span>
+              <span className="kanit-medium">Statistics</span>
             </button>
 
             <button
-              onClick={() => navigate('/feed')}
-              className={`flex items-center w-full p-3 rounded-lg group ${isActive('/feed') ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+              onClick={() => navigate('/workout-categories')}
+              className={`flex items-center w-full p-3 rounded-lg group ${isActive('/workout-categories')
+                  ? 'bg-zinc-900 text-white'
+                  : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
                 }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <span className="kanit-medium">Feed</span>
+              <span className="kanit-medium">Workouts</span>
             </button>
 
           </div>
