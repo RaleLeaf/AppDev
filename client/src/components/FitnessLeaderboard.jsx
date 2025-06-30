@@ -68,7 +68,7 @@ const FitnessLeaderboard = () => {
       </div>
       
       {/* Leaderboard List with margins */}
-      <div className="px-7 flex-1 mt-2">
+      <div className="px-10 md:px-32 flex-1 mt-2">
         {leaderboardData.map((user, index) => (
           <div key={user.id} className="relative mb-4">
             {/* Rank Circle - Green outline with black fill */}
