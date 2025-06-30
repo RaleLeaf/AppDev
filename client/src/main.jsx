@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { useLocation } from 'react-router-dom';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css'
 import App from './App.jsx'
@@ -22,10 +23,18 @@ import ProgressTracker from './components/ProgressTracker.jsx';
 import AIFitnessHelper from './components/AIFitnessHelper.jsx';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
+import ChatBubble from './components/ChatBubble';
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <Router>
+function AppWithChatBubble() {
+  const location = useLocation();
+  const normalizedPath = location.pathname.toLowerCase().replace(/\/$/, '');
+  const hiddenPaths = ['/login', '/signup', '/splash','/ai-helper','/user-details','','/'];
+
+  const showChatBubble = !hiddenPaths.includes(normalizedPath);
+
+  return (
+    <>
+      {showChatBubble && <ChatBubble />}
       <Routes>
         {/* Splash screen as separate route */}
         <Route path="/splash" element={<Splash />} />
@@ -54,6 +63,14 @@ createRoot(document.getElementById('root')).render(
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/test" element={<Test />} />
       </Routes>
-    </Router>
-  </StrictMode>,
+    </>
+  );
+}
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+  <Router>
+    <AppWithChatBubble />
+  </Router>
+</StrictMode>
 )
