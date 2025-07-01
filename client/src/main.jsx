@@ -24,6 +24,8 @@ import AIFitnessHelper from './components/AIFitnessHelper.jsx';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ChatBubble from './components/ChatBubble';
+import Macro from './components/MacroTracker.jsx';
+import AddFood from './components/AddFood.jsx';
 
 function AppWithChatBubble() {
   const location = useLocation();
@@ -62,6 +64,8 @@ function AppWithChatBubble() {
         <Route path="/ai-helper" element={<AIFitnessHelper />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/test" element={<Test />} />
+        <Route path ="/macros" element={<Macro />} />
+        <Route path="/add-food" element={<AddFood />}/>
       </Routes>
     </>
   );
