@@ -51,17 +51,52 @@ const UsersFeed = () => {
       <SideNav />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col pb-20 md:pb-0">
+      <div className="flex-1 flex flex-col pb-20 md:pb-0 bg-black">
         {/* Content Container - Centered properly for all screen sizes */}
         <div className="w-full max-w-2xl mx-auto md:px-6 lg:ml-32 xl:mx-auto">
-          {/* Header */}
-          <div className="p-5 flex items-center justify-between sticky top-0 bg-black/95 backdrop-blur-sm z-10">
-            <h1 className="text-xl md:text-2xl font-bold kanit-bold tracking-wider">USERS FEED</h1>
-            <button className="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* Header with improved mobile styling */}
+          <div className="p-4 md:p-5 flex items-center justify-between sticky top-0 bg-black/95 backdrop-blur-sm z-10">
+            <h1 className="text-lg md:text-2xl font-bold kanit-bold tracking-wider">USERS FEED</h1>
+            
+            {/* Button moved to a simple icon for mobile */}
+            <button className="w-9 h-9 md:w-10 md:h-10 bg-zinc-900 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </button>
+          </div>
+
+          {/* Mobile Filter Pills - Moved below header and expanded to include Popular */}
+          <div className="md:hidden flex mx-4 mb-4 justify-center">
+            <div className="inline-flex space-x-1 bg-zinc-900/80 p-1 rounded-full">
+              {['All', 'Following', 'Popular'].map(tab => (
+                <button 
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                    activeTab === tab 
+                      ? 'bg-lime-600 text-black font-medium' 
+                      : 'text-zinc-300 hover:bg-zinc-800'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Post Creation - Mobile version */}
+          <div className="md:hidden flex mx-4 mb-4 bg-zinc-900 rounded-xl p-2.5 items-center shadow-md">
+            <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
+              <img 
+                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200" 
+                alt="Your Profile" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1 bg-zinc-800/80 rounded-full px-3 py-2 text-sm cursor-text">
+              <span className="text-zinc-400">Share your progress...</span>
+            </div>
           </div>
 
           {/* Post Creation - Desktop only */}
@@ -98,14 +133,14 @@ const UsersFeed = () => {
             ))}
           </div>
 
-          {/* Posts Feed */}
+          {/* Posts Feed - Improved for mobile */}
           <div className="flex-1">
             {posts.map(post => (
-              <div key={post.id} className="mx-4 mb-5 bg-zinc-900 rounded-lg overflow-hidden shadow-lg md:hover:shadow-xl transition-all md:border border-zinc-800/50 md:hover:border-zinc-700/50">
+              <div key={post.id} className="mx-3 md:mx-4 mb-4 md:mb-5 bg-zinc-900 rounded-lg overflow-hidden shadow-md md:hover:shadow-xl transition-all md:border border-zinc-800/50 md:hover:border-zinc-700/50">
                 {/* Post Header */}
-                <div className="p-3 md:p-4 flex items-center justify-between">
+                <div className="p-2.5 md:p-4 flex items-center justify-between">
                   <div className="flex items-center group cursor-pointer" onClick={() => navigate(`/profile/${post.user.username}`)}>
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden mr-3 flex-shrink-0 ring-2 ring-transparent md:group-hover:ring-lime-500/30 transition-all">
+                    <div className="w-9 h-9 md:w-12 md:h-12 rounded-full overflow-hidden mr-2.5 md:mr-3 flex-shrink-0 ring-2 ring-transparent md:group-hover:ring-lime-500/30 transition-all">
                       <img
                         src={post.user.avatar}
                         alt={post.user.name}
@@ -116,7 +151,7 @@ const UsersFeed = () => {
                       <div className="flex items-center">
                         <h3 className="font-medium kanit-medium text-sm md:text-base group-hover:text-lime-500 transition-colors">{post.user.name}</h3>
                         {post.user.isVerified && (
-                          <svg className="w-4 h-4 ml-1 text-lime-500 fill-current" viewBox="0 0 20 20">
+                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4 ml-1 text-lime-500 fill-current" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                         )}
@@ -128,21 +163,21 @@ const UsersFeed = () => {
                       </div>
                     </div>
                   </div>
-                  <button className="text-zinc-500 hover:text-white transition-colors p-1.5 rounded-full hover:bg-zinc-800/50">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button className="text-zinc-500 hover:text-white transition-colors p-1 md:p-1.5 rounded-full hover:bg-zinc-800/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
                     </svg>
                   </button>
                 </div>
 
                 {/* Post Content */}
-                <div className="px-3 md:px-5 pb-3">
-                  <p className="text-sm md:text-base mb-3 leading-relaxed">{post.content}</p>
+                <div className="px-3 md:px-5 pb-2 md:pb-3">
+                  <p className="text-sm md:text-base mb-2 md:mb-3 leading-relaxed">{post.content}</p>
                   
-                  {/* Tags - Desktop only */}
-                  <div className="hidden md:flex flex-wrap gap-1.5 mb-3">
+                  {/* Tags - Mobile version added */}
+                  <div className="flex md:flex flex-wrap gap-1 md:gap-1.5 mb-2 md:mb-3 overflow-x-auto scrollbar-hide">
                     {post.tags.map((tag, i) => (
-                      <span key={i} className="bg-zinc-800 text-lime-500 px-2 py-0.5 text-xs rounded-md hover:bg-zinc-700 cursor-pointer transition-colors">
+                      <span key={i} className="bg-zinc-800 text-lime-500 px-1.5 md:px-2 py-0.5 text-xs rounded-md whitespace-nowrap">
                         #{tag}
                       </span>
                     ))}
@@ -154,34 +189,47 @@ const UsersFeed = () => {
                   <img
                     src={post.image}
                     alt="Post"
-                    className="w-full object-cover max-h-80 md:max-h-[28rem] cursor-pointer hover:scale-[1.02] transition-transform duration-500"
+                    className="w-full object-cover max-h-64 md:max-h-[28rem] cursor-pointer"
                   />
                 </div>
 
-                {/* Post Actions */}
-                <div className="flex p-2 md:p-3 border-t border-zinc-800/50">
+                {/* Post Stats - Mobile-friendly version */}
+                <div className="flex items-center px-3 py-1.5 text-xs text-zinc-400">
+                  <span>{post.likes} likes</span>
+                  <span className="mx-1.5">•</span>
+                  <span>{post.comments} comments</span>
+                  {post.shares > 0 && (
+                    <>
+                      <span className="mx-1.5">•</span>
+                      <span>{post.shares} shares</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Post Actions - Improved for mobile */}
+                <div className="flex p-1 md:p-3 border-t border-zinc-800/50">
                   {/* Like Button */}
-                  <button className={`flex-1 flex items-center justify-center py-2 md:py-3 hover:bg-zinc-800 rounded-md transition-colors ${post.hasLiked ? 'text-red-500' : ''}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 mr-1 ${post.hasLiked ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button className={`flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors ${post.hasLiked ? 'text-red-500' : ''}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 md:h-6 md:w-6 mr-1 ${post.hasLiked ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={post.hasLiked ? 0 : 2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
-                    <span className={`text-sm md:text-base ${post.hasLiked ? 'font-medium' : ''}`}>{post.likes}</span>
+                    <span className={`text-sm md:text-base ${post.hasLiked ? 'font-medium' : ''}`}>Like</span>
                   </button>
 
                   {/* Comment Button */}
-                  <button className="flex-1 flex items-center justify-center py-2 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    <span className="text-sm md:text-base">{post.comments}</span>
+                    <span className="text-sm md:text-base">Comment</span>
                   </button>
 
                   {/* Share Button */}
-                  <button className="flex-1 flex items-center justify-center py-2 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
-                    <span className="text-sm md:text-base">{post.shares}</span>
+                    <span className="text-sm md:text-base">Share</span>
                   </button>
                 </div>
 
@@ -229,13 +277,33 @@ const UsersFeed = () => {
               </div>
             ))}
           </div>
+          
+          {/* Mobile floating action button for creating a new post */}
+          <div className="md:hidden fixed bottom-20 right-4 z-10">
+            <button className="bg-lime-600 text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       
       {/* Bottom Navigation - Only visible on mobile and small tablets */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black z-20">
         <BottomNav />
       </div>
+      
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };
