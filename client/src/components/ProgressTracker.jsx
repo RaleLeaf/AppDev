@@ -52,8 +52,10 @@ export default function FitnessDashboard() {
 
     const dailyStats = {
         date: "2021-10-18",
-        calories: 432,
-        calorieGoal: 1200,
+        exercisesDone: 3,
+        exercisesTotal: 12,
+        caloriesBurned: 900,
+        caloriesBurnedTotal: 1500,
         steps: 6540,
         time: 45,
         heartRate: 72,
@@ -62,8 +64,42 @@ export default function FitnessDashboard() {
             { name: "Flash Cycling", time: "12:00" },
         ],
     };
+    
 
-    const percentage = (dailyStats.calories / dailyStats.calorieGoal) * 100;
+    const percentage1 = (dailyStats.caloriesBurned / dailyStats.caloriesBurnedTotal) * 100;
+    const percentage2 = (dailyStats.exercisesDone / dailyStats.exercisesTotal) * 100;
+
+    //FOR TESTING RA (FOR THE MODAL TO UPDATE VALUES)
+
+    const [stats, setStats] = useState({
+        date: "2021-10-18",
+        exercisesDone: 3,
+        exercisesTotal: 12,
+        caloriesBurned: 900,
+        caloriesBurnedTotal: 1500,
+        steps: 6540,
+        time: 45,
+        heartRate: 72,
+      });
+      
+    // 2) Control modal visibility
+    const [showEditModal, setShowEditModal] = useState(false);
+
+    // 3) Update stats when inputs change
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setStats(prev => ({
+        ...prev,
+        [name]: name === "date" ? value : Number(value),
+        }));
+    };
+
+    // 4) Close handlers
+    const handleCancel = () => setShowEditModal(false);
+    const handleSave   = () => {
+        // you could add validation or a save API call here
+        setShowEditModal(false);
+    }
 
     return (
         <div className="min-h-screen bg-black text-white flex">
@@ -104,7 +140,7 @@ export default function FitnessDashboard() {
                     <div className="flex justify-between items-center mb-6 px-1 z-50">
                         <button onClick={goToPreviousWeek} className="text-white text-2xl px-2 z-50">←</button>
 
-                        <div className="flex gap-2 justify-center items-center w-full max-w-md z-50">
+                        <div className="flex gap-2 md:gap-12 justify-center items-center w-full max-w-md z-50">
                             {visibleWeekDays.map((day, i) => (
                                 <button
                                     key={i}
@@ -115,8 +151,8 @@ export default function FitnessDashboard() {
                                             : "text-gray-400"
                                     }`}
                                 >
-                                    <div className="text-xs">{format(day, "EEEEE")}</div>
-                                    <div className="text-sm">{format(day, "d")}</div>
+                                    <div className="text-xs md:text-sm">{format(day, "EEEEE")}</div>
+                                    <div className="text-sm md:text-md">{format(day, "d")}</div>
                                 </button>
                             ))}
                         </div>
@@ -162,19 +198,35 @@ export default function FitnessDashboard() {
 
                     {/* Progress Circle and Goal */}
                     <div className="flex items-center flex-col justify-center gap-4 mb-6 px-3">
-                        <div className="w-52 h-52 mt-4">
-                            <CircularProgressbarWithChildren
-                                value={percentage}
-                                styles={buildStyles({
-                                    pathColor: "#EF4444",
-                                    trailColor: "#333333",
-                                })}
-                            >
-                                <div className="text-center">
-                                    <p className="text-xl font-bold">{dailyStats.calories} / {dailyStats.calorieGoal}</p>
-                                    <p className="text-xs text-gray-400">Calorie Goal</p>
-                                </div>
-                            </CircularProgressbarWithChildren>
+                        <div className="flex flex-row gap-10">
+                            <div className="w-46 h-46 md:w-52 md:h-52 mt-4">
+                                <CircularProgressbarWithChildren
+                                    value={percentage2}
+                                    styles={buildStyles({
+                                        pathColor: "#EF4444",
+                                        trailColor: "#333333",
+                                    })}
+                                >
+                                    <div className="text-center">
+                                        <p className="text-xl font-bold">{dailyStats.exercisesDone} / {dailyStats.exercisesTotal}</p>
+                                        <p className="text-xs text-gray-400">No. of<br></br>Exercises Finished</p>
+                                    </div>
+                                </CircularProgressbarWithChildren>
+                            </div>
+                            <div className="w-46 h-46 md:w-52 md:h-52 mt-4">
+                                <CircularProgressbarWithChildren
+                                    value={percentage1}
+                                    styles={buildStyles({
+                                        pathColor: "#EF4444",
+                                        trailColor: "#333333",
+                                    })}
+                                >
+                                    <div className="text-center">
+                                        <p className="text-xl font-bold">{dailyStats.caloriesBurned} / {dailyStats.caloriesBurnedTotal}</p>
+                                        <p className="text-xs text-gray-400">Calories Burned</p>
+                                    </div>
+                                </CircularProgressbarWithChildren>
+                            </div>
                         </div>
                         <div className="bg-lime-400 text-black text-sm p-3 rounded-xl">
                             <p>Goal for today:</p>
@@ -183,15 +235,84 @@ export default function FitnessDashboard() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-8 mb-6 px-4 justify-center">
+                    <div className="flex flex-row gap-8 md:gap-72 mb-6 px-4 justify-center">
                         <StatCard label="Steps" value={dailyStats.steps} color="lime" />
                         <StatCard label="Time" value={`${dailyStats.time} min`} color="red" />
                         <StatCard label="Heart" value={`${dailyStats.heartRate} bpm`} color="orange" />
                     </div>
 
+
+                    {/* Modal Overlay */}
+                    {showEditModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                        <div className="bg-[#1a1a1a] p-6 rounded-xl w-11/12 max-w-md">
+                            <h3 className="text-xl font-bold mb-4">Update Today's Progress</h3>
+                            <div className="space-y-3">
+                            {/* Date */}
+                            <div>
+                                <label className="block text-sm mb-1">Date</label>
+                                <input
+                                type="date"
+                                name="date"
+                                value={stats.date}
+                                onChange={handleChange}
+                                className="w-full p-2 rounded bg-[#333333] text-white"
+                                />
+                            </div>
+                            {/* Numeric fields */}
+                            {[
+                                { name: "exercisesDone",    label: "Exercises Done" },
+                                { name: "exercisesTotal",   label: "Exercises Total" },
+                                { name: "caloriesBurned",   label: "Calories Burned" },
+                                { name: "caloriesBurnedTotal", label: "Calories Burned Total" },
+                                { name: "steps",            label: "Steps" },
+                                { name: "time",             label: "Time (min)" },
+                                { name: "heartRate",        label: "Heart Rate (bpm)" },
+                            ].map(({ name, label }) => (
+                                <div key={name}>
+                                <label className="block text-sm mb-1">{label}</label>
+                                <input
+                                    type="number"
+                                    name={name}
+                                    value={stats[name]}
+                                    onChange={handleChange}
+                                    className="w-full p-2 rounded bg-[#333333] text-white"
+                                />
+                                </div>
+                            ))}
+                            </div>
+                            <div className="flex justify-end gap-4 mt-6">
+                            <button
+                                onClick={handleCancel}
+                                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="px-4 py-2 rounded bg-lime-400 text-black hover:bg-lime-500"
+                            >
+                                Save
+                            </button>
+                            </div>
+                        </div>
+                        </div>
+                    )}
+
+                    <div className="px-4 mb-4 flex justify-center">
+                        <button
+                        onClick={() => setShowEditModal(true)}
+                        className="bg-lime-400 text-black hover:bg-lime-500 px-80 py-2 rounded-lg"
+                        >
+                        Edit Progress
+                        </button>
+                    </div>
+
+                    
+
                     {/* Finished Workouts */}
                     <div className="px-4 mb-20">
-                        <h2 className="font-semibold text-lg mb-3">Finished Workout</h2>
+                        <h2 className="font-semibold text-lg mb-3">Finished Exercises</h2>
                         <div className="space-y-2">
                             {dailyStats.finishedWorkouts.map((w, i) => (
                                 <div key={i} className="bg-[#333333] rounded-xl p-4 flex justify-between items-center">
@@ -211,6 +332,8 @@ export default function FitnessDashboard() {
             <div className="md:hidden fixed bottom-0 left-0 right-0">
                 <BottomNav />
             </div>
+
+            
         </div>
     );
 }
@@ -223,7 +346,7 @@ function StatCard({ label, value, color }) {
     }[color];
 
     return (
-        <div className={`rounded-full border-4 ${ringColor} w-24 h-24 flex flex-col justify-center items-center text-sm`}>
+        <div className={`rounded-full border-4 ${ringColor} w-24 md:w-36 md:h-36 h-24 flex flex-col justify-center items-center text-sm`}>
             <p className="font-bold">{value}</p>
             <p className="text-gray-400">{label}</p>
         </div>
