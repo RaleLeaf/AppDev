@@ -81,7 +81,7 @@ export default function FitnessDashboard() {
         time: 45,
         heartRate: 72,
       });
-      
+
     // 2) Control modal visibility
     const [showEditModal, setShowEditModal] = useState(false);
 
@@ -302,7 +302,7 @@ export default function FitnessDashboard() {
                     <div className="px-4 mb-4 flex justify-center">
                         <button
                         onClick={() => setShowEditModal(true)}
-                        className="bg-lime-400 text-black hover:bg-lime-500 px-80 py-2 rounded-lg"
+                        className="bg-lime-400 text-black hover:bg-lime-500 px-12 md:px-80 py-2 rounded-lg"
                         >
                         Edit Progress
                         </button>

@@ -147,7 +147,7 @@ const HomePage = () => {
                   </div>
 
                   {/* Mobile Quick Stats - Improved layout */}
-                  <div className="lg:hidden bg-zinc-900 rounded-xl p-4 mb-6 shadow-md">
+                  <div onClick={() => navigate('/progress')} className=" lg:hidden bg-zinc-900 rounded-xl p-4 mb-6 shadow-md z-50">
                     <h3 className="text-base font-bold kanit-medium mb-3">This Week</h3>
                     <div className="grid grid-cols-3 gap-2 text-sm">
                       <div className="flex flex-col items-center bg-zinc-800 rounded-lg p-2">
@@ -166,9 +166,9 @@ const HomePage = () => {
                   </div>
 
                   {/* Additional Desktop Content */}
-                  <div className="hidden lg:block space-y-6">
+                  <div onClick={() => navigate('/progress')}  className="hidden lg:block space-y-6">
                     {/* Quick Stats */}
-                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md">
+                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02] ">
                       <h3 className="text-lg font-bold kanit-medium mb-4">This Week</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
@@ -187,7 +187,7 @@ const HomePage = () => {
                     </div>
 
                     {/* Upcoming */}
-                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md">
+                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02] ">
                       <h3 className="text-lg font-bold kanit-medium mb-4">Up Next</h3>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">

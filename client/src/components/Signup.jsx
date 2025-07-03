@@ -47,7 +47,7 @@ function Signup() {
                 <div className="relative">
                     <img
                         className="w-full h-full object-cover"
-                        src="loginPic2.png"
+                        src="photo11signup.jpg"
                         alt="slide"
                     />
                 </div>

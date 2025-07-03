@@ -83,7 +83,7 @@ const FitnessLeaderboard = () => {
           {/* Leaderboard List */}
           <div className="px-4 sm:px-6 md:px-8 lg:px-10 flex-1 mt-2">
             {leaderboardData.map((user) => (
-              <div key={user.id} className="relative mb-4">
+              <div key={user.id} onClick={() => navigate('/userprofile')} className="relative mb-4">
                 <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-black border-2 border-lime-500 flex items-center justify-center text-white font-bold">
                   {user.id}
                 </div>

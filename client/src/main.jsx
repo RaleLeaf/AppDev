@@ -53,7 +53,7 @@ function AppWithChatBubble() {
         <Route path="/workout-categories" element={<WorkoutCategories />} />
         <Route path="/exercises" element={<ExerciseList />} />
         <Route path="/trainers" element={<TrainersList />} />
-        <Route path="/trainer/:id" element={<TrainerProfile />} />
+        <Route path="/userprofile" element={<TrainerProfile />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/settings" element={<Settings />} />

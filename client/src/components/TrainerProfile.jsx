@@ -38,8 +38,7 @@ export default function TrainerProfile() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row">
-      {/* Sidebar Navigation for desktop */}
-      <div className="hidden md:flex md:flex-col md:w-64 md:border-r border-zinc-800 md:p-6">
+            <div className="hidden md:flex md:flex-col md:w-64 md:border-r border-zinc-800 md:p-6">
         <h1 className="text-2xl font-bold mb-10 kanit-medium">baSICK</h1>
 
         <nav className="flex-1">
@@ -109,87 +108,108 @@ export default function TrainerProfile() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 font-sans">
-        <div className='absolute flex flex-row p-4 mt-6 z-20'>
-          <button className="text-white text-2xl mb-4 cursor-pointer">
-            <div className='absolute h-10 w-10 rounded-full bg-[#333333] opacity-50'>
-              <h3 className='pt-1'>←</h3>
-            </div>
+      <div className="flex-1 flex flex-col lg:px-12 lg:py-8">
+        {/* Back Button */}
+        <div className='absolute flex p-4 mt-6 z-20 lg:hidden'>
+          <button onClick={() => navigate(-1)} className="text-white text-2xl cursor-pointer">
+            ←
           </button>
         </div>
 
-        <div className="relative">
-          <img
-            src={t.profileImage}
-            alt={t.name}
-            className="w-full h-[350px] object-cover"
-          />
-          <button className="absolute top-4 left-4 text-white text-2xl">←</button>
+        {/* Desktop back button */}
+        <div className='hidden lg:block mb-6'>
+          <button onClick={() => navigate(-1)} className="text-white text-xl hover:text-lime-400">
+            ← Back to Trainers
+          </button>
         </div>
 
-        <div className="bg-[#1a1a1a] p-6 rounded-t-3xl -mt-20 z-10 relative">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-bold">{t.name}</h1>
-              <p className="text-lime-400 text-sm">{t.specialization}</p>
-            </div>
-            <div className="bg-lime-400 p-3 rounded-full text-black">📞</div>
-          </div>
-
-          <div className="flex justify-between mt-6 bg-[#333333] p-4 rounded-xl text-center">
-            <div>
-              <p className="text-lg font-semibold">{t.experience}</p>
-              <p className="text-sm text-gray-400">Experience</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold">{t.completed}</p>
-              <p className="text-sm text-gray-400">Completed</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold">{t.activeClients}</p>
-              <p className="text-sm text-gray-400">Active Clients</p>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <div className="flex justify-between items-center">
-              <h2 className="font-semibold text-lg">Reviews</h2>
-              <span className="bg-lime-400 text-black px-2 py-1 text-sm rounded font-bold">
-                {t.reviews.averageRating}
-              </span>
-            </div>
-
-            <div className="bg-[#333333] p-4 mt-4 rounded-xl">
-              <div className="flex justify-between items-center">
-                <p className="font-semibold">{t.reviews.latest.name}</p>
-                <div className="flex items-center gap-2">
-                  <span className="bg-lime-400 text-black text-xs font-bold px-2 py-0.5 rounded">
-                    {t.reviews.latest.rating}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {t.reviews.latest.timeAgo}
-                  </span>
-                </div>
+        {/* Content Grid */}
+        <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+          {/* Left Panel */}
+          <div className="space-y-6">
+            <div className="relative">
+              <img
+                src={t.profileImage}
+                alt={t.name}
+                className="w-full h-[350px] object-cover rounded-xl lg:h-[500px]"
+              />
+              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 px-3 py-1 rounded text-sm">
+                <span className="text-white font-semibold">{t.specialization}</span>
               </div>
-              <p className="mt-2 text-sm text-gray-300">
-                {t.reviews.latest.comment}
-              </p>
             </div>
 
-            <div className="mt-3">
-              <button className="text-lime-400 text-sm font-medium">
+            <div className="flex justify-between bg-[#333333] p-4 rounded-xl text-center">
+              <div>
+                <p className="text-lg font-semibold">{t.experience}</p>
+                <p className="text-sm text-gray-400">Years Exp.</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{t.completed}</p>
+                <p className="text-sm text-gray-400">Sessions</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{t.activeClients}</p>
+                <p className="text-sm text-gray-400">Clients</p>
+              </div>
+            </div>
+
+            <button className="w-full bg-lime-400 text-black py-3 rounded-xl text-lg font-semibold lg:hidden">
+              Book Appointment
+            </button>
+          </div>
+
+          {/* Right Panel */}
+          <div className="mt-8 lg:mt-0">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-xl font-bold">{t.name}</h1>
+                <p className="text-lime-400 text-sm">{t.specialization}</p>
+              </div>
+              <div className="bg-lime-400 p-3 rounded-full text-black cursor-pointer">
+                📞
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <div className="flex justify-between items-center">
+                <h2 className="font-semibold text-lg">Reviews</h2>
+                <span className="bg-lime-400 text-black px-3 py-1 text-sm rounded font-bold">
+                  {t.reviews.averageRating} ({t.reviews.count})
+                </span>
+              </div>
+
+              <div className="bg-[#333333] p-4 mt-4 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <p className="font-semibold text-md">{t.reviews.latest.name}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-lime-400 text-black text-xs font-bold px-2 py-0.5 rounded">
+                      {t.reviews.latest.rating}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {t.reviews.latest.timeAgo}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-gray-300">
+                  {t.reviews.latest.comment}
+                </p>
+              </div>
+
+              <button className="mt-4 text-lime-400 text-sm font-medium hover:underline">
                 Read all reviews
               </button>
             </div>
-          </div>
 
-          <div className="mt-6">
-            <button className="w-full bg-lime-400 text-black py-3 rounded-xl text-lg font-semibold">
+            <button className="hidden lg:block mt-8 w-full bg-lime-400 text-black py-4 rounded-xl text-lg font-semibold hover:bg-lime-300">
               Book an Appointment
             </button>
           </div>
-          <BottomNav />
         </div>
+      </div>
+
+      {/* Bottom Nav for mobile */}
+      <div className="lg:hidden">
+        <BottomNav />
       </div>
     </div>
   );
