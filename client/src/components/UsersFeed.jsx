@@ -2,10 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 import SideNav from './SideNav';
+import CommentModal from './CommentModal';
+import ShareModal from './ShareModal';
+import PostModal from './PostModal';
 
 const UsersFeed = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [commentModalPost, setCommentModalPost] = useState(null);
+  const [shareModalPost, setShareModalPost] = useState(null);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
 
   // Enhanced feed data with more details
   const posts = [
@@ -49,7 +55,7 @@ const UsersFeed = () => {
     <div className="min-h-screen bg-black text-white flex">
       {/* SideNav - Only visible on medium screens and up */}
       <SideNav />
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col pb-20 md:pb-0 bg-black">
         {/* Content Container - Centered properly for all screen sizes */}
@@ -57,9 +63,10 @@ const UsersFeed = () => {
           {/* Header with improved mobile styling */}
           <div className="p-4 md:p-5 flex items-center justify-between sticky top-0 bg-black/95 backdrop-blur-sm z-10">
             <h1 className="text-lg md:text-2xl font-bold kanit-bold tracking-wider">USERS FEED</h1>
-            
+
             {/* Button moved to a simple icon for mobile */}
-            <button className="w-9 h-9 md:w-10 md:h-10 bg-zinc-900 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
+            <button className="w-9 h-9 md:w-10 md:h-10 bg-zinc-900 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors"
+              onClick={() => setIsPostModalOpen(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -70,14 +77,13 @@ const UsersFeed = () => {
           <div className="md:hidden flex mx-4 mb-4 justify-center">
             <div className="inline-flex space-x-1 bg-zinc-900/80 p-1 rounded-full">
               {['All', 'Following', 'Popular'].map(tab => (
-                <button 
+                <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1 rounded-full text-xs transition-colors ${
-                    activeTab === tab 
-                      ? 'bg-lime-600 text-black font-medium' 
-                      : 'text-zinc-300 hover:bg-zinc-800'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs transition-colors ${activeTab === tab
+                    ? 'bg-lime-600 text-black font-medium'
+                    : 'text-zinc-300 hover:bg-zinc-800'
+                    }`}
                 >
                   {tab}
                 </button>
@@ -86,47 +92,50 @@ const UsersFeed = () => {
           </div>
 
           {/* Post Creation - Mobile version */}
-          <div className="md:hidden flex mx-4 mb-4 bg-zinc-900 rounded-xl p-2.5 items-center shadow-md">
+          <div
+            className="md:hidden flex mx-4 mb-4 bg-zinc-900 rounded-xl p-2.5 items-center shadow-md cursor-pointer"
+            onClick={() => setIsPostModalOpen(true)}
+          >
             <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
-              <img 
-                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200" 
-                alt="Your Profile" 
+              <img
+                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200"
+                alt="Your Profile"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex-1 bg-zinc-800/80 rounded-full px-3 py-2 text-sm cursor-text">
-              <span className="text-zinc-400">Share your progress...</span>
+            <div className="flex-1 bg-zinc-800/80 rounded-full px-3 py-2 text-sm text-zinc-400">
+              Share your progress...
             </div>
           </div>
 
           {/* Post Creation - Desktop only */}
-          <div className="hidden md:flex mx-4 mb-6 bg-zinc-900/60 rounded-xl p-4 items-center shadow-lg">
+          <div
+            className="hidden md:flex mx-4 mb-6 bg-zinc-900/60 rounded-xl p-4 items-center shadow-lg cursor-pointer"
+            onClick={() => setIsPostModalOpen(true)}
+          >
             <div className="w-10 h-10 rounded-full overflow-hidden mr-3 flex-shrink-0">
-              <img 
-                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200" 
-                alt="Your Profile" 
+              <img
+                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200"
+                alt="Your Profile"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex-1 bg-zinc-800/80 rounded-full px-5 py-3 cursor-text hover:bg-zinc-800 transition-colors">
-              <span className="text-zinc-400">Share your workout progress...</span>
+            <div className="flex-1 bg-zinc-800/80 rounded-full px-5 py-3 text-zinc-400 hover:bg-zinc-800 transition-colors">
+              Share your workout progress...
             </div>
-            <button className="ml-3 bg-lime-600 hover:bg-lime-500 text-black font-medium rounded-full px-5 py-2.5 transition-colors flex-shrink-0">
-              Post
-            </button>
           </div>
+
 
           {/* Filter Pills - Desktop only */}
           <div className="hidden md:flex mx-4 mb-4 space-x-2">
             {['All', 'Following', 'Popular'].map(tab => (
-              <button 
+              <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-                  activeTab === tab 
-                    ? 'bg-zinc-800 text-white' 
-                    : 'bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800'
-                }`}
+                className={`px-4 py-1.5 rounded-full text-sm transition-colors ${activeTab === tab
+                  ? 'bg-zinc-800 text-white'
+                  : 'bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800'
+                  }`}
               >
                 {tab}
               </button>
@@ -173,7 +182,7 @@ const UsersFeed = () => {
                 {/* Post Content */}
                 <div className="px-3 md:px-5 pb-2 md:pb-3">
                   <p className="text-sm md:text-base mb-2 md:mb-3 leading-relaxed">{post.content}</p>
-                  
+
                   {/* Tags - Mobile version added */}
                   <div className="flex md:flex flex-wrap gap-1 md:gap-1.5 mb-2 md:mb-3 overflow-x-auto scrollbar-hide">
                     {post.tags.map((tag, i) => (
@@ -217,15 +226,21 @@ const UsersFeed = () => {
                   </button>
 
                   {/* Comment Button */}
-                  <button className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
+                  <button
+                    className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors"
+                    onClick={() => setCommentModalPost(post)}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                     <span className="text-sm md:text-base">Comment</span>
                   </button>
 
+
                   {/* Share Button */}
-                  <button className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors">
+                  <button className="flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors"
+                    onClick={() => setShareModalPost(post)}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
@@ -239,9 +254,9 @@ const UsersFeed = () => {
                     <div className="mb-3">
                       <div className="flex items-start mb-2">
                         <div className="w-7 h-7 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                          <img 
-                            src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200" 
-                            alt="Commenter" 
+                          <img
+                            src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200"
+                            alt="Commenter"
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -254,16 +269,16 @@ const UsersFeed = () => {
                   )}
                   <div className="flex">
                     <div className="w-8 h-8 rounded-full overflow-hidden mr-3 flex-shrink-0">
-                      <img 
-                        src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200" 
-                        alt="Your Profile" 
+                      <img
+                        src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200"
+                        alt="Your Profile"
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1 bg-zinc-800 rounded-full px-4 py-2 flex items-center">
-                      <input 
-                        type="text" 
-                        placeholder="Add a comment..." 
+                      <input
+                        type="text"
+                        placeholder="Add a comment..."
                         className="bg-transparent w-full focus:outline-none text-sm"
                       />
                       <button className="ml-2 text-lime-500 hover:text-lime-400 transition-colors">
@@ -276,8 +291,33 @@ const UsersFeed = () => {
                 </div>
               </div>
             ))}
+
+            <CommentModal
+              post={commentModalPost}
+              onClose={() => setCommentModalPost(null)}
+              onShare={(post) => {
+                setShareModalPost(post);
+                setCommentModalPost(null); // close the comment modal
+              }}
+            />
+
+            <ShareModal
+              post={shareModalPost}
+              onClose={() => setShareModalPost(null)}
+              onShare={(post) => {
+                // Handle the share logic, e.g., clone post with new ID, add to feed, etc.
+                console.log('Shared:', post);
+              }} />
+            {isPostModalOpen && (
+              <PostModal
+                onClose={() => setIsPostModalOpen(false)}
+                onPost={(newPost) => {
+                  setPosts((prev) => [newPost, ...prev]);
+                }} />
+            )}
+
           </div>
-          
+
           {/* Mobile floating action button for creating a new post */}
           <div className="md:hidden fixed bottom-20 right-4 z-10">
             <button className="bg-lime-600 text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg">
@@ -288,12 +328,12 @@ const UsersFeed = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Bottom Navigation - Only visible on mobile and small tablets */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black z-20">
         <BottomNav />
       </div>
-      
+
       {/* Custom scrollbar styles */}
       <style jsx>{`
         .scrollbar-hide {
