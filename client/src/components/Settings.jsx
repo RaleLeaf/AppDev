@@ -92,15 +92,7 @@ const Settings = () => {
             ))}
 
             {/* Logout Button */}
-            <button
-              className="w-full flex justify-between items-center py-4 mt-8 text-red-500 hover:bg-red-500/10 transition-colors rounded-md px-2"
-            >
-              <span className="kanit-medium">Logout</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414a1 1 0 00-.293-.707L11.414 2.414A1 1 0 0010.707 2H4a1 1 0 00-1 1zm7 4a1 1 0 011 1v4a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd" />
-                <path d="M14 4a1 1 0 00-1-1h-2a1 1 0 000 2h2a1 1 0 001-1z" />
-              </svg>
-            </button>
+            
           </div>
         </div>
       </div>
