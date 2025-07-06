@@ -74,6 +74,38 @@ public class FirestoreService {
         return results;
     }
 
+    public <T> List<T> findByArrayContainsAny(String collection, String field, List<?> values, Class<T> clazz)
+            throws ExecutionException, InterruptedException {
+        Query query = db.collection(collection).whereArrayContainsAny(field, values);
+        ApiFuture<QuerySnapshot> future = query.get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+        List<T> results = new ArrayList<>();
+        for (QueryDocumentSnapshot document : documents) {
+            results.add(document.toObject(clazz));
+        }
+        return results;
+    }
+
+    public synchronized String getNextId(String counterName) throws ExecutionException, InterruptedException {
+        DocumentReference counterRef = db.collection("counters").document(counterName);
+        DocumentSnapshot snapshot = counterRef.get().get();
+        if (!snapshot.exists()) {
+            counterRef.set(Map.of("value", 0L)).get();
+        }
+
+        db.runTransaction(transaction -> {
+            Long current = transaction.get(counterRef).get().contains("value") ?
+                transaction.get(counterRef).get().getLong("value") : 0L;
+            Long next = current + 1;
+            transaction.update(counterRef, "value", next);
+            return next;
+        }).get();
+
+        snapshot = counterRef.get().get();
+        return String.valueOf(snapshot.getLong("value"));
+    }
+
     public void update(String collection, String documentId, Map<String, Object> updates) 
             throws ExecutionException, InterruptedException {
         ApiFuture<WriteResult> future = db.collection(collection).document(documentId).update(updates);
