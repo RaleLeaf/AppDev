@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 
-import com.basick.app.dto.ApiResponse;
+import com.basick.app.dto.common.ApiResponse;
 import com.google.firebase.auth.FirebaseAuthException;
 
 @ControllerAdvice

@@ -1,4 +1,4 @@
-package com.basick.app.dto;
+package com.basick.app.dto.common;
 
 import java.time.LocalDateTime;
 

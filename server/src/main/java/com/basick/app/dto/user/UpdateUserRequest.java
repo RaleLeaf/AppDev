@@ -1,0 +1,78 @@
+package com.basick.app.dto.user;
+
+import java.util.List;
+import com.google.cloud.Timestamp;
+
+/**
+ * Request DTO for updating a User
+ */
+public class UpdateUserRequest {
+    private String name;
+    private String email;
+    private String phoneNumber;
+    private Boolean isEmailVerified;
+    private Boolean isPhoneVerified;
+    private Boolean isActive;
+    private String role;
+    private List<String> following;
+    private List<String> followers;
+    private List<String> blockedUsers;
+    private Boolean pushNotificationsEnabled;
+    private Boolean emailNotificationsEnabled;
+    private Boolean workoutRemindersEnabled;
+    private Boolean socialNotificationsEnabled;
+    private String subscriptionType;
+    private Timestamp subscriptionExpiresAt;
+
+    // Constructors
+    public UpdateUserRequest() {}
+
+    // Getters and Setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    
+    public Boolean getIsEmailVerified() { return isEmailVerified; }
+    public void setIsEmailVerified(Boolean isEmailVerified) { this.isEmailVerified = isEmailVerified; }
+    
+    public Boolean getIsPhoneVerified() { return isPhoneVerified; }
+    public void setIsPhoneVerified(Boolean isPhoneVerified) { this.isPhoneVerified = isPhoneVerified; }
+    
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+    
+    public List<String> getFollowing() { return following; }
+    public void setFollowing(List<String> following) { this.following = following; }
+    
+    public List<String> getFollowers() { return followers; }
+    public void setFollowers(List<String> followers) { this.followers = followers; }
+    
+    public List<String> getBlockedUsers() { return blockedUsers; }
+    public void setBlockedUsers(List<String> blockedUsers) { this.blockedUsers = blockedUsers; }
+    
+    public Boolean getPushNotificationsEnabled() { return pushNotificationsEnabled; }
+    public void setPushNotificationsEnabled(Boolean pushNotificationsEnabled) { this.pushNotificationsEnabled = pushNotificationsEnabled; }
+    
+    public Boolean getEmailNotificationsEnabled() { return emailNotificationsEnabled; }
+    public void setEmailNotificationsEnabled(Boolean emailNotificationsEnabled) { this.emailNotificationsEnabled = emailNotificationsEnabled; }
+    
+    public Boolean getWorkoutRemindersEnabled() { return workoutRemindersEnabled; }
+    public void setWorkoutRemindersEnabled(Boolean workoutRemindersEnabled) { this.workoutRemindersEnabled = workoutRemindersEnabled; }
+    
+    public Boolean getSocialNotificationsEnabled() { return socialNotificationsEnabled; }
+    public void setSocialNotificationsEnabled(Boolean socialNotificationsEnabled) { this.socialNotificationsEnabled = socialNotificationsEnabled; }
+    
+    public String getSubscriptionType() { return subscriptionType; }
+    public void setSubscriptionType(String subscriptionType) { this.subscriptionType = subscriptionType; }
+    
+    public Timestamp getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(Timestamp subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
+}
