@@ -1111,6 +1111,9 @@ After completing all steps, you'll have these endpoints:
 ```bash
 mvn clean compile
 mvn spring-boot:run
+
+for macbook: ./mvnw spring-boot:run
+
 ```
 
 ### 8.2 Test Endpoints

@@ -1,33 +1,59 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import axios from 'axios';
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 function Signup() {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: ''
-    });
-    const { signUp, signInWithGoogle, loading, error, clearErrors } = useAuthStore();
+   
+    // const { signUp, signInWithGoogle, loading, error, clearErrors } = useAuthStore();
 
-    const handleInputChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleSignUp = async (e) => {
         e.preventDefault();
-        clearErrors();
+        setError('');
+        setLoading(true);
+
         try {
-            await signUp(formData.name, formData.email, formData.password);
-            navigate('/home');
-        } catch (error) {
-            console.error('Signup failed:', error);
+            const auth = getAuth();
+            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+            const firebaseUser = userCredential.user;
+
+            // Get Firebase token and store
+            const token = await firebaseUser.getIdToken();
+            localStorage.setItem('token', token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            // Create user in backend
+            await axios.post(
+                'http://localhost:8080/api/users',
+                { firebaseUid: firebaseUser.uid, name: formData.name, email: firebaseUser.email },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Fetch created user to get ID
+            const res = await axios.get(
+                `http://localhost:8080/api/users/firebase/${firebaseUser.uid}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const user = res.data;
+
+            localStorage.setItem('userId', user.id);
+            navigate('/user-details');
+        } catch (err) {
+            console.error('Signup failed:', err);
+            setError('Signup failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
+
 
     const handleGoogleSignIn = async () => {
         clearErrors();
@@ -38,6 +64,8 @@ function Signup() {
             console.error('Google sign-in failed:', error);
         }
     };
+
+    
 
     return (
         <div className="h-screen w-screen bg-[#1a1a1a] overflow-hidden relative">
@@ -97,6 +125,7 @@ function Signup() {
                         >
                             {loading ? 'SIGNING UP...' : 'Sign Up'}
                         </button>
+
                     </form>
 
                     <div className="flex items-center my-4">
@@ -182,6 +211,7 @@ function Signup() {
                         >
                             {loading ? 'SIGNING UP...' : 'SIGN UP'}
                         </button>
+
                     </div>
 
                     <div className="flex justify-center mt-6">
