@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import axios from 'axios';
 
 function Login() {
     const navigate = useNavigate();
@@ -20,11 +21,29 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         clearErrors();
+    
         try {
-            await signIn(formData.email, formData.password);
+            const response = await axios.post(
+                'http://localhost:8080/api/auth/login',
+                { email: formData.email, password: formData.password }
+            );
+    
+            const { token, user } = response.data;
+    
+            // Store token and set default header
+            localStorage.setItem('token', token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+            // Save user in global store
+            useAuthStore.getState().setUser(user);
+    
+            // Redirect to home
             navigate('/home');
         } catch (error) {
             console.error('Login failed:', error);
+            // Clear only the password
+            setFormData({ ...formData, password: '' }); // fixed typo fileciteturn1file14
+            useAuthStore.getState().setError('Invalid email or password.');
         }
     };
 
