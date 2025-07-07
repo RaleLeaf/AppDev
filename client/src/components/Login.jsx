@@ -8,7 +8,7 @@ function Login() {
         email: '',
         password: ''
     });
-    const { signIn, signInWithGoogle, loading, error, clearErrors } = useAuthStore();
+    const { signIn, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
 
     const handleInputChange = (e) => {
         setFormData({
@@ -20,11 +20,14 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         clearErrors();
+        
         try {
             await signIn(formData.email, formData.password);
             navigate('/home');
         } catch (error) {
             console.error('Login failed:', error);
+            // Clear only the password field on error
+            setFormData({ ...formData, password: '' });
         }
     };
 
@@ -75,10 +78,10 @@ function Login() {
                         />
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="bg-[#cfff33] text-black py-3 rounded font-semibold w-full"
                         >
-                            {loading ? 'LOADING...' : 'Login'}
+                            {isLoading ? 'LOADING...' : 'Login'}
                         </button>
                     </form>
 
@@ -152,10 +155,10 @@ function Login() {
                         </div>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="gothic-regular bg-[#cfff33] rounded-full px-6 ml-6"
                         >
-                            {loading ? 'LOADING...' : 'LOGIN'}
+                            {isLoading ? 'LOADING...' : 'LOGIN'}
                         </button>
                     </div>
 
