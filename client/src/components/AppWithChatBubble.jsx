@@ -28,6 +28,8 @@ import DevDashboard from './dev/DevDashboard.jsx';
 import AuthTester from './dev/AuthTester.jsx';
 import LastLoginDebugger from './dev/LastLoginDebugger.jsx';
 import UserIdTest from './dev/UserIdTest.jsx';
+import ProtectedRoute from './ProtectedRoute.jsx';
+import PublicRoute from './PublicRoute.jsx';
 
 function AppWithChatBubble() {
   const location = useLocation();
@@ -40,43 +42,40 @@ function AppWithChatBubble() {
     <>
       {showChatBubble && <ChatBubble />}
       <Routes>
-        {/* Splash screen as separate route */}
+        {/* Public routes - redirect to home if already authenticated */}
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
         <Route path="/splash" element={<Splash />} />
         
-        {/* Login and Signup routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        {/* Default route redirects to login */}
-        <Route path="/" element={<Login />} />
+        {/* Protected routes - require authentication */}
+        <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/user-details" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
+        <Route path="/workout-categories" element={<ProtectedRoute><WorkoutCategories /></ProtectedRoute>} />
+        <Route path="/exercises" element={<ProtectedRoute><ExerciseList /></ProtectedRoute>} />
+        <Route path="/trainers" element={<ProtectedRoute><TrainersList /></ProtectedRoute>} />
+        <Route path="/userprofile" element={<ProtectedRoute><TrainerProfile /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/leaderboard" element={<ProtectedRoute><FitnessLeaderboard /></ProtectedRoute>} />
+        <Route path="/appointments" element={<ProtectedRoute><Appointment /></ProtectedRoute>} />
+        <Route path="/feed" element={<ProtectedRoute><UsersFeed /></ProtectedRoute>} />
+        <Route path="/progress" element={<ProtectedRoute><ProgressTracker /></ProtectedRoute>} />
+        <Route path="/ai-helper" element={<ProtectedRoute><AIFitnessHelper /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+        <Route path="/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+        <Route path="/macros" element={<ProtectedRoute><Macro /></ProtectedRoute>} />
+        <Route path="/add-food" element={<ProtectedRoute><AddFood /></ProtectedRoute>} />
         
-        {/* Main app routes after login */}
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/user-details" element={<UserDetails />} />
-        <Route path="/workout-categories" element={<WorkoutCategories />} />
-        <Route path="/exercises" element={<ExerciseList />} />
-        <Route path="/trainers" element={<TrainersList />} />
-        <Route path="/userprofile" element={<TrainerProfile />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/edit-profile" element={<EditProfile />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/leaderboard" element={<FitnessLeaderboard />} />
-        <Route path="/appointments" element={<Appointment />} />
-        <Route path="/feed" element={<UsersFeed />} />
-        <Route path="/progress" element={<ProgressTracker />} />
-        <Route path="/ai-helper" element={<AIFitnessHelper />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/test" element={<Test />} />
-        <Route path ="/macros" element={<Macro />} />
-        <Route path="/add-food" element={<AddFood />}/>
-        
-        {/* Developer Tools */}
-        <Route path="/dev" element={<DevDashboard />} />
-        <Route path="/auth-demo" element={<AuthDemo />} />
-        <Route path="/api-tester" element={<ApiTester />} />
-        <Route path="/firestore-tester" element={<FirestoreTester />} />
-        <Route path="/auth-tester" element={<AuthTester />} />
-        <Route path="/lastlogin-debugger" element={<LastLoginDebugger />} />
-        <Route path="/user-id-test" element={<UserIdTest />} />
+        {/* Developer Tools - protected routes */}
+        <Route path="/dev" element={<ProtectedRoute><DevDashboard /></ProtectedRoute>} />
+        <Route path="/auth-demo" element={<ProtectedRoute><AuthDemo /></ProtectedRoute>} />
+        <Route path="/api-tester" element={<ProtectedRoute><ApiTester /></ProtectedRoute>} />
+        <Route path="/firestore-tester" element={<ProtectedRoute><FirestoreTester /></ProtectedRoute>} />
+        <Route path="/auth-tester" element={<ProtectedRoute><AuthTester /></ProtectedRoute>} />
+        <Route path="/lastlogin-debugger" element={<ProtectedRoute><LastLoginDebugger /></ProtectedRoute>} />
+        <Route path="/user-id-test" element={<ProtectedRoute><UserIdTest /></ProtectedRoute>} />
       </Routes>
     </>
   );

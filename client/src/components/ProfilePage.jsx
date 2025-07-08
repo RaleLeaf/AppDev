@@ -2,13 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 import SideNav from './SideNav';
+import useAuthStore from '../store/authStore';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuthStore();
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
 
-  const handleSignOut = () => {
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Sign out failed:', error);
+      // Still navigate to login even if signOut fails
+      navigate('/login');
+    }
   };
 
   return (

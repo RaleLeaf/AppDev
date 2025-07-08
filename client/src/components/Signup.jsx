@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 function Signup() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -12,6 +13,9 @@ function Signup() {
     });
     const [validationErrors, setValidationErrors] = useState({});
     const { signUp, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
+
+    // Get the intended destination or default to home
+    const from = location.state?.from?.pathname || '/home';
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -75,7 +79,7 @@ function Signup() {
         
         try {
             await signUp(formData.name, formData.email, formData.password);
-            navigate('/home');
+            navigate(from, { replace: true });
         } catch (error) {
             console.error('Signup failed:', error);
             // Clear password fields on error
@@ -91,7 +95,7 @@ function Signup() {
         clearErrors();
         try {
             await signInWithGoogle();
-            navigate('/home');
+            navigate(from, { replace: true });
         } catch (error) {
             console.error('Google sign-in failed:', error);
         }
