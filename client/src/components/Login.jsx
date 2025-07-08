@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
-import axios from 'axios';
 
 function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
-    const { signIn, signInWithGoogle, loading, error, clearErrors } = useAuthStore();
+    const { signIn, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
+
+    // Get the intended destination or default to home
+    const from = location.state?.from?.pathname || '/home';
 
     const handleInputChange = (e) => {
         setFormData({
@@ -21,29 +24,14 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         clearErrors();
-    
+        
         try {
-            const response = await axios.post(
-                'http://localhost:8080/api/auth/login',
-                { email: formData.email, password: formData.password }
-            );
-    
-            const { token, user } = response.data;
-    
-            // Store token and set default header
-            localStorage.setItem('token', token);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
-            // Save user in global store
-            useAuthStore.getState().setUser(user);
-    
-            // Redirect to home
-            navigate('/home');
+            await signIn(formData.email, formData.password);
+            navigate(from, { replace: true });
         } catch (error) {
             console.error('Login failed:', error);
-            // Clear only the password
-            setFormData({ ...formData, password: '' }); // fixed typo fileciteturn1file14
-            useAuthStore.getState().setError('Invalid email or password.');
+            // Clear only the password field on error
+            setFormData({ ...formData, password: '' });
         }
     };
 
@@ -51,7 +39,7 @@ function Login() {
         clearErrors();
         try {
             await signInWithGoogle();
-            navigate('/home');
+            navigate(from, { replace: true });
         } catch (error) {
             console.error('Google sign-in failed:', error);
         }
@@ -94,10 +82,10 @@ function Login() {
                         />
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="bg-[#cfff33] text-black py-3 rounded font-semibold w-full"
                         >
-                            {loading ? 'LOADING...' : 'Login'}
+                            {isLoading ? 'LOADING...' : 'Login'}
                         </button>
                     </form>
 
@@ -171,10 +159,10 @@ function Login() {
                         </div>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="gothic-regular bg-[#cfff33] rounded-full px-6 ml-6"
                         >
-                            {loading ? 'LOADING...' : 'LOGIN'}
+                            {isLoading ? 'LOADING...' : 'LOGIN'}
                         </button>
                     </div>
 

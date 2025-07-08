@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.basick.app.model.UserProfile;
@@ -25,7 +24,6 @@ public class UserProfileRepository {
     private static final String COLLECTION_NAME = "userProfiles";
     private final FirestoreService firestoreService;
 
-    @Autowired
     public UserProfileRepository(FirestoreService firestoreService) {
         this.firestoreService = firestoreService;
     }
@@ -59,6 +57,25 @@ public class UserProfileRepository {
     }
 
     /**
+     * Find user profile by user document ID
+     */
+    public UserProfile findByUserId(String userId) throws ExecutionException, InterruptedException {
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("userId", userId).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            UserProfile userProfile = document.toObject(UserProfile.class);
+            return userProfile;
+        }
+        
+        return null;
+    }
+
+    /**
      * Find all user profiles
      */
     public List<UserProfile> findAll() throws ExecutionException, InterruptedException {
@@ -73,11 +90,11 @@ public class UserProfileRepository {
     }
 
     /**
-     * Find user profile by user ID
+     * Find user profile by user Firebase UID
      */
-    public UserProfile findByUserId(String userId) throws ExecutionException, InterruptedException {
+    public UserProfile findByUserFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
         CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
-        Query query = collection.whereEqualTo("userId", userId).limit(1);
+        Query query = collection.whereEqualTo("userFirebaseUid", firebaseUid).limit(1);
         
         ApiFuture<QuerySnapshot> querySnapshot = query.get();
         QuerySnapshot snapshot = querySnapshot.get();
@@ -85,7 +102,6 @@ public class UserProfileRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             return userProfile;
         }
         
@@ -105,7 +121,6 @@ public class UserProfileRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             return userProfile;
         }
         
@@ -129,7 +144,6 @@ public class UserProfileRepository {
         
         for (QueryDocumentSnapshot document : displayNameResults.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -143,10 +157,9 @@ public class UserProfileRepository {
         
         for (QueryDocumentSnapshot document : usernameResults.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             
-            // Avoid duplicates
-            boolean alreadyAdded = userProfiles.stream().anyMatch(up -> up.getId().equals(userProfile.getId()));
+            // Avoid duplicates - use userId for comparison since we're using userId as the reference
+            boolean alreadyAdded = userProfiles.stream().anyMatch(up -> up.getUserId().equals(userProfile.getUserId()));
             if (!alreadyAdded) {
                 userProfiles.add(userProfile);
             }
@@ -168,7 +181,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -188,7 +200,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -208,7 +219,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -229,7 +239,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -249,7 +258,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -269,7 +277,6 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -289,10 +296,45 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
-            userProfile.setId(document.getId());
             userProfiles.add(userProfile);
         }
         
         return userProfiles;
+    }
+
+    /**
+     * Update user profile by user document ID
+     */
+    public void updateByUserId(String userId, UserProfile userProfile) throws ExecutionException, InterruptedException {
+        // First find the user profile by user ID to get the document ID
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("userId", userId).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            String documentId = document.getId();
+            firestoreService.saveWithId(COLLECTION_NAME, documentId, userProfile);
+        }
+    }
+
+    /**
+     * Delete user profile by user document ID
+     */
+    public void deleteByUserId(String userId) throws ExecutionException, InterruptedException {
+        // First find the user profile by user ID to get the document ID
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("userId", userId).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            String documentId = document.getId();
+            firestoreService.delete(COLLECTION_NAME, documentId);
+        }
     }
 }

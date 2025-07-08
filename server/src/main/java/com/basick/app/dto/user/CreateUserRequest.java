@@ -1,7 +1,5 @@
 package com.basick.app.dto.user;
 
-import com.google.cloud.Timestamp;
-
 /**
  * Request DTO for creating a new User
  */
@@ -9,7 +7,6 @@ public class CreateUserRequest {
     private String firebaseUid;
     private String name;
     private String email;
-    private String password;
     private String phoneNumber;
     private String authType;
     private String role;
@@ -21,7 +18,7 @@ public class CreateUserRequest {
     private Boolean workoutRemindersEnabled;
     private Boolean socialNotificationsEnabled;
     private String subscriptionType;
-    private Timestamp subscriptionExpiresAt;
+    private String subscriptionExpiresAt;
 
     // Constructors
     public CreateUserRequest() {}
@@ -35,9 +32,6 @@ public class CreateUserRequest {
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
     
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
@@ -72,6 +66,6 @@ public class CreateUserRequest {
     public String getSubscriptionType() { return subscriptionType; }
     public void setSubscriptionType(String subscriptionType) { this.subscriptionType = subscriptionType; }
     
-    public Timestamp getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
-    public void setSubscriptionExpiresAt(Timestamp subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
+    public String getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(String subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 }

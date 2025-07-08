@@ -5,7 +5,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.basick.app.dto.user.*;
+import com.basick.app.dto.user.CreateUserRequest;
+import com.basick.app.dto.user.NotificationPreferencesRequest;
+import com.basick.app.dto.user.UpdateUserRequest;
+import com.basick.app.dto.user.UserDTO;
 import com.basick.app.model.User;
 import com.google.cloud.Timestamp;
 
@@ -26,6 +29,20 @@ public class UserMapper {
     }
 
     /**
+     * Convert ISO-8601 String to Timestamp
+     */
+    private Timestamp stringToTimestamp(String timestampString) {
+        if (timestampString == null || timestampString.isEmpty()) {
+            return null;
+        }
+        try {
+            return Timestamp.parseTimestamp(timestampString);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Convert User entity to UserDTO
      */
     public UserDTO toUserDTO(User user) {
@@ -34,7 +51,6 @@ public class UserMapper {
         }
 
         UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
         userDTO.setFirebaseUid(user.getFirebaseUid());
         userDTO.setName(user.getName());
         userDTO.setEmail(user.getEmail());
@@ -84,7 +100,6 @@ public class UserMapper {
         user.setFirebaseUid(request.getFirebaseUid());
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
         user.setPhoneNumber(request.getPhoneNumber());
         user.setAuthType(request.getAuthType());
         user.setRole(request.getRole());
@@ -96,7 +111,7 @@ public class UserMapper {
         user.setWorkoutRemindersEnabled(request.getWorkoutRemindersEnabled());
         user.setSocialNotificationsEnabled(request.getSocialNotificationsEnabled());
         user.setSubscriptionType(request.getSubscriptionType());
-        user.setSubscriptionExpiresAt(request.getSubscriptionExpiresAt());
+        user.setSubscriptionExpiresAt(stringToTimestamp(request.getSubscriptionExpiresAt()));
 
         return user;
     }
@@ -146,7 +161,7 @@ public class UserMapper {
             user.setSubscriptionType(request.getSubscriptionType());
         }
         if (request.getSubscriptionExpiresAt() != null) {
-            user.setSubscriptionExpiresAt(request.getSubscriptionExpiresAt());
+            user.setSubscriptionExpiresAt(stringToTimestamp(request.getSubscriptionExpiresAt()));
         }
         if (request.getBlockedUsers() != null) {
             user.setBlockedUsers(request.getBlockedUsers());
@@ -188,7 +203,7 @@ public class UserMapper {
         }
 
         UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
+        userDTO.setFirebaseUid(user.getFirebaseUid());
         userDTO.setName(user.getName());
         userDTO.setEmail(user.getEmail());
         userDTO.setRole(user.getRole());

@@ -3,12 +3,18 @@ package com.basick.app.service;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.basick.app.dto.user.*;
+import com.basick.app.dto.user.CreateUserRequest;
+import com.basick.app.dto.user.NotificationPreferencesRequest;
+import com.basick.app.dto.user.UpdateUserRequest;
+import com.basick.app.dto.user.UserDTO;
+import com.basick.app.dto.userprofile.UserProfileDTO;
 import com.basick.app.mapper.UserMapper;
+import com.basick.app.mapper.UserProfileMapper;
 import com.basick.app.model.User;
+import com.basick.app.model.UserProfile;
+import com.basick.app.repository.UserProfileRepository;
 import com.basick.app.repository.UserRepository;
 import com.google.cloud.Timestamp;
 
@@ -20,11 +26,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final UserProfileRepository userProfileRepository;
+    private final UserProfileMapper userProfileMapper;
 
-    @Autowired
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, UserProfileRepository userProfileRepository, UserProfileMapper userProfileMapper) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.userProfileRepository = userProfileRepository;
+        this.userProfileMapper = userProfileMapper;
     }
 
     /**
@@ -66,18 +75,30 @@ public class UserService {
         User user = userMapper.toUser(request);
         user.setCreatedAt(Timestamp.now());
         user.setUpdatedAt(Timestamp.now());
+        user.setLastLoginAt(Timestamp.now());
         
-        String userId = userRepository.save(user);
-        user.setId(userId);
+        // Save user and get the document ID
+        String userDocumentId = userRepository.saveUser(user);
+        
+        // Automatically create a corresponding UserProfile using the User document ID
+        UserProfile userProfile = new UserProfile();
+        userProfile.setUserId(userDocumentId); // Reference to User document ID
+        userProfile.setFirebaseUid(user.getFirebaseUid()); // Copy Firebase UID
+        userProfile.setName(user.getName()); // Copy name
+        userProfile.setEmail(user.getEmail()); // Copy email
+        userProfile.setDisplayName(user.getName()); // Default display name to user name
+        userProfile.setCreatedAt(Timestamp.now());
+        userProfile.setUpdatedAt(Timestamp.now());
+        userProfileRepository.save(userProfile);
         
         return userMapper.toUserDTO(user);
     }
 
     /**
-     * Update user
+     * Update user by Firebase UID
      */
-    public UserDTO updateUser(String userId, UpdateUserRequest request) throws ExecutionException, InterruptedException {
-        User existingUser = userRepository.findById(userId);
+    public UserDTO updateUser(String firebaseUid, UpdateUserRequest request) throws ExecutionException, InterruptedException {
+        User existingUser = userRepository.findByFirebaseUid(firebaseUid);
         if (existingUser == null) {
             return null;
         }
@@ -85,59 +106,65 @@ public class UserService {
         userMapper.updateUserFromRequest(request, existingUser);
         existingUser.setUpdatedAt(Timestamp.now());
         
-        userRepository.update(userId, existingUser);
+        userRepository.updateByFirebaseUid(firebaseUid, existingUser);
         return userMapper.toUserDTO(existingUser);
     }
 
     /**
-     * Delete user
+     * Delete user by Firebase UID
      */
-    public boolean deleteUser(String userId) throws ExecutionException, InterruptedException {
-        User existingUser = userRepository.findById(userId);
+    public boolean deleteUser(String firebaseUid) throws ExecutionException, InterruptedException {
+        User existingUser = userRepository.findByFirebaseUid(firebaseUid);
         if (existingUser == null) {
             return false;
         }
         
-        userRepository.delete(userId);
+        // Find the User document ID and delete the associated UserProfile
+        String userDocumentId = userRepository.findUserDocumentIdByFirebaseUid(firebaseUid);
+        if (userDocumentId != null) {
+            userProfileRepository.deleteByUserId(userDocumentId);
+        }
+        
+        userRepository.deleteByFirebaseUid(firebaseUid);
         return true;
     }
 
     /**
-     * Follow a user
+     * Follow a user by Firebase UID
      */
-    public boolean followUser(String currentUserId, String targetUserId) throws ExecutionException, InterruptedException {
-        if (currentUserId.equals(targetUserId)) {
+    public boolean followUser(String currentUserFirebaseUid, String targetUserFirebaseUid) throws ExecutionException, InterruptedException {
+        if (currentUserFirebaseUid.equals(targetUserFirebaseUid)) {
             return false; // Can't follow yourself
         }
 
-        User currentUser = userRepository.findById(currentUserId);
-        User targetUser = userRepository.findById(targetUserId);
+        User currentUser = userRepository.findByFirebaseUid(currentUserFirebaseUid);
+        User targetUser = userRepository.findByFirebaseUid(targetUserFirebaseUid);
         
         if (currentUser == null || targetUser == null) {
             return false;
         }
 
-        // Add to following list if not already following
-        if (currentUser.getFollowing() != null && !currentUser.getFollowing().contains(targetUserId)) {
-            currentUser.getFollowing().add(targetUserId);
-            userRepository.update(currentUserId, currentUser);
+        // Add to following list if not already following (using Firebase UID)
+        if (currentUser.getFollowing() != null && !currentUser.getFollowing().contains(targetUserFirebaseUid)) {
+            currentUser.getFollowing().add(targetUserFirebaseUid);
+            userRepository.updateByFirebaseUid(currentUserFirebaseUid, currentUser);
         }
 
-        // Add to followers list if not already a follower
-        if (targetUser.getFollowers() != null && !targetUser.getFollowers().contains(currentUserId)) {
-            targetUser.getFollowers().add(currentUserId);
-            userRepository.update(targetUserId, targetUser);
+        // Add to followers list if not already a follower (using Firebase UID)
+        if (targetUser.getFollowers() != null && !targetUser.getFollowers().contains(currentUserFirebaseUid)) {
+            targetUser.getFollowers().add(currentUserFirebaseUid);
+            userRepository.updateByFirebaseUid(targetUserFirebaseUid, targetUser);
         }
 
         return true;
     }
 
     /**
-     * Unfollow a user
+     * Unfollow a user by Firebase UID
      */
-    public boolean unfollowUser(String currentUserId, String targetUserId) throws ExecutionException, InterruptedException {
-        User currentUser = userRepository.findById(currentUserId);
-        User targetUser = userRepository.findById(targetUserId);
+    public boolean unfollowUser(String currentUserFirebaseUid, String targetUserFirebaseUid) throws ExecutionException, InterruptedException {
+        User currentUser = userRepository.findByFirebaseUid(currentUserFirebaseUid);
+        User targetUser = userRepository.findByFirebaseUid(targetUserFirebaseUid);
         
         if (currentUser == null || targetUser == null) {
             return false;
@@ -145,69 +172,69 @@ public class UserService {
 
         // Remove from following list
         if (currentUser.getFollowing() != null) {
-            currentUser.getFollowing().remove(targetUserId);
-            userRepository.update(currentUserId, currentUser);
+            currentUser.getFollowing().remove(targetUserFirebaseUid);
+            userRepository.updateByFirebaseUid(currentUserFirebaseUid, currentUser);
         }
 
         // Remove from followers list
         if (targetUser.getFollowers() != null) {
-            targetUser.getFollowers().remove(currentUserId);
-            userRepository.update(targetUserId, targetUser);
+            targetUser.getFollowers().remove(currentUserFirebaseUid);
+            userRepository.updateByFirebaseUid(targetUserFirebaseUid, targetUser);
         }
 
         return true;
     }
 
     /**
-     * Block a user
+     * Block a user by Firebase UID
      */
-    public boolean blockUser(String currentUserId, String targetUserId) throws ExecutionException, InterruptedException {
-        if (currentUserId.equals(targetUserId)) {
+    public boolean blockUser(String currentUserFirebaseUid, String targetUserFirebaseUid) throws ExecutionException, InterruptedException {
+        if (currentUserFirebaseUid.equals(targetUserFirebaseUid)) {
             return false; // Can't block yourself
         }
 
-        User currentUser = userRepository.findById(currentUserId);
+        User currentUser = userRepository.findByFirebaseUid(currentUserFirebaseUid);
         if (currentUser == null) {
             return false;
         }
 
         // Add to blocked users list if not already blocked
-        if (currentUser.getBlockedUsers() != null && !currentUser.getBlockedUsers().contains(targetUserId)) {
-            currentUser.getBlockedUsers().add(targetUserId);
-            userRepository.update(currentUserId, currentUser);
+        if (currentUser.getBlockedUsers() != null && !currentUser.getBlockedUsers().contains(targetUserFirebaseUid)) {
+            currentUser.getBlockedUsers().add(targetUserFirebaseUid);
+            userRepository.updateByFirebaseUid(currentUserFirebaseUid, currentUser);
             
             // Also unfollow each other if following
-            unfollowUser(currentUserId, targetUserId);
-            unfollowUser(targetUserId, currentUserId);
+            unfollowUser(currentUserFirebaseUid, targetUserFirebaseUid);
+            unfollowUser(targetUserFirebaseUid, currentUserFirebaseUid);
         }
 
         return true;
     }
 
     /**
-     * Unblock a user
+     * Unblock a user by Firebase UID
      */
-    public boolean unblockUser(String currentUserId, String targetUserId) throws ExecutionException, InterruptedException {
-        User currentUser = userRepository.findById(currentUserId);
+    public boolean unblockUser(String currentUserFirebaseUid, String targetUserFirebaseUid) throws ExecutionException, InterruptedException {
+        User currentUser = userRepository.findByFirebaseUid(currentUserFirebaseUid);
         if (currentUser == null) {
             return false;
         }
 
         // Remove from blocked users list
         if (currentUser.getBlockedUsers() != null) {
-            currentUser.getBlockedUsers().remove(targetUserId);
-            userRepository.update(currentUserId, currentUser);
+            currentUser.getBlockedUsers().remove(targetUserFirebaseUid);
+            userRepository.updateByFirebaseUid(currentUserFirebaseUid, currentUser);
         }
 
         return true;
     }
 
     /**
-     * Update notification preferences
+     * Update notification preferences by Firebase UID
      */
-    public UserDTO updateNotificationPreferences(String userId, NotificationPreferencesRequest request) 
+    public UserDTO updateNotificationPreferences(String firebaseUid, NotificationPreferencesRequest request) 
             throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             return null;
         }
@@ -226,7 +253,7 @@ public class UserService {
         }
 
         user.setUpdatedAt(Timestamp.now());
-        userRepository.update(userId, user);
+        userRepository.updateByFirebaseUid(firebaseUid, user);
         
         return userMapper.toUserDTO(user);
     }
@@ -240,100 +267,115 @@ public class UserService {
     }
 
     /**
-     * Get user followers
+     * Get user followers by Firebase UID
      */
-    public List<UserDTO> getUserFollowers(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public List<UserDTO> getUserFollowers(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null || user.getFollowers() == null) {
             return List.of();
         }
 
-        List<User> followers = userRepository.findByIds(user.getFollowers());
+        List<User> followers = userRepository.findByFirebaseUids(user.getFollowers());
         return userMapper.toUserDTOList(followers);
     }
 
     /**
-     * Get users that this user is following
+     * Get users that this user is following by Firebase UID
      */
-    public List<UserDTO> getUserFollowing(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public List<UserDTO> getUserFollowing(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null || user.getFollowing() == null) {
             return List.of();
         }
 
-        List<User> following = userRepository.findByIds(user.getFollowing());
+        List<User> following = userRepository.findByFirebaseUids(user.getFollowing());
         return userMapper.toUserDTOList(following);
     }
 
     /**
-     * Update user's last login timestamp
+     * Update user's last login timestamp by Firebase UID
      */
-    public void updateLastLogin(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public void updateLastLogin(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user != null) {
             user.setLastLoginAt(Timestamp.now());
-            user.setUpdatedAt(Timestamp.now());
-            userRepository.update(userId, user);
+            // Don't update updatedAt for lastLogin - only for actual user data changes
+            userRepository.updateByFirebaseUid(firebaseUid, user);
         }
     }
 
     /**
-     * Verify user email
+     * Verify user email by Firebase UID
      */
-    public boolean verifyEmail(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public boolean verifyEmail(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             return false;
         }
 
         user.setIsEmailVerified(true);
         user.setUpdatedAt(Timestamp.now());
-        userRepository.update(userId, user);
+        userRepository.updateByFirebaseUid(firebaseUid, user);
         return true;
     }
 
     /**
-     * Verify user phone
+     * Verify user phone by Firebase UID
      */
-    public boolean verifyPhone(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public boolean verifyPhone(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             return false;
         }
 
         user.setIsPhoneVerified(true);
         user.setUpdatedAt(Timestamp.now());
-        userRepository.update(userId, user);
+        userRepository.updateByFirebaseUid(firebaseUid, user);
         return true;
     }
 
     /**
-     * Deactivate user account
+     * Deactivate user account by Firebase UID
      */
-    public boolean deactivateUser(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public boolean deactivateUser(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             return false;
         }
 
         user.setIsActive(false);
         user.setUpdatedAt(Timestamp.now());
-        userRepository.update(userId, user);
+        userRepository.updateByFirebaseUid(firebaseUid, user);
         return true;
     }
 
     /**
-     * Reactivate user account
+     * Reactivate user account by Firebase UID
      */
-    public boolean reactivateUser(String userId) throws ExecutionException, InterruptedException {
-        User user = userRepository.findById(userId);
+    public boolean reactivateUser(String firebaseUid) throws ExecutionException, InterruptedException {
+        User user = userRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             return false;
         }
 
         user.setIsActive(true);
         user.setUpdatedAt(Timestamp.now());
-        userRepository.update(userId, user);
+        userRepository.updateByFirebaseUid(firebaseUid, user);
         return true;
+    }
+
+    /**
+     * Get UserProfile by Firebase UID (convenience method)
+     */
+    public UserProfileDTO getUserProfileByFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
+        // First get the User document ID
+        String userDocumentId = userRepository.findUserDocumentIdByFirebaseUid(firebaseUid);
+        if (userDocumentId == null) {
+            return null;
+        }
+        
+        // Then get the UserProfile using the User document ID
+        UserProfile userProfile = userProfileRepository.findByUserId(userDocumentId);
+        return userProfile != null ? userProfileMapper.toUserProfileDTO(userProfile) : null;
     }
 }
