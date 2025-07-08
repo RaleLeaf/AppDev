@@ -106,6 +106,23 @@ const FirestoreTester = () => {
     }
   };
 
+  const testUpdateLastLogin = async () => {
+    if (!user?.uid) {
+      addResult('Update Last Login', false, null, 'No authenticated user');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await firestoreService.updateLastLogin(user.uid);
+      addResult('Update Last Login', true, { message: 'Last login timestamp updated in Firestore' });
+    } catch (error) {
+      addResult('Update Last Login', false, null, error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const testUpdateProfile = async () => {
     if (!user?.uid) {
       addResult('Update User Profile', false, null, 'No authenticated user');
@@ -213,6 +230,13 @@ const FirestoreTester = () => {
               className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white py-2 px-4 rounded"
             >
               Check User Exists
+            </button>
+            <button
+              onClick={testUpdateLastLogin}
+              disabled={isLoading}
+              className="bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 text-white py-2 px-4 rounded"
+            >
+              Update Last Login
             </button>
             <button
               onClick={testUpdateProfile}

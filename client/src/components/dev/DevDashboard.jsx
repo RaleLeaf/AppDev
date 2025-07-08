@@ -14,6 +14,27 @@ const DevDashboard = () => {
       color: 'bg-blue-600 hover:bg-blue-700'
     },
     {
+      name: 'Auth Tester',
+      description: 'Comprehensive authentication testing with lastLoginAt verification',
+      path: '/auth-tester',
+      icon: '🧪',
+      color: 'bg-indigo-600 hover:bg-indigo-700'
+    },
+    {
+      name: 'LastLogin Debugger',
+      description: 'Detailed lastLoginAt debugging with step-by-step verification',
+      path: '/lastlogin-debugger',
+      icon: '🐛',
+      color: 'bg-pink-600 hover:bg-pink-700'
+    },
+    {
+      name: 'User ID Test',
+      description: 'Test backend user creation and verify ID assignment',
+      path: '/user-id-test',
+      icon: '🆔',
+      color: 'bg-purple-600 hover:bg-purple-700'
+    },
+    {
       name: 'API Tester',
       description: 'Test backend API endpoints with custom requests and quick tests',
       path: '/api-tester',

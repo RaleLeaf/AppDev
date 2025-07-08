@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.basick.app.model.User;
@@ -25,7 +24,6 @@ public class UserRepository {
     private static final String COLLECTION_NAME = "users";
     private final FirestoreService firestoreService;
 
-    @Autowired
     public UserRepository(FirestoreService firestoreService) {
         this.firestoreService = firestoreService;
     }
@@ -85,7 +83,6 @@ public class UserRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             return user;
         }
         
@@ -105,7 +102,6 @@ public class UserRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             return user;
         }
         
@@ -135,7 +131,6 @@ public class UserRepository {
             
             for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
                 User user = document.toObject(User.class);
-                user.setId(document.getId());
                 users.add(user);
             }
         }
@@ -151,8 +146,6 @@ public class UserRepository {
         CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
         
         // Search by name (case-insensitive contains search)
-        String lowerQuery = searchQuery.toLowerCase();
-        
         // Note: Firestore doesn't support case-insensitive searches natively
         // This is a simplified implementation. In production, you might want to:
         // 1. Store lowercase versions of searchable fields
@@ -168,7 +161,6 @@ public class UserRepository {
         
         for (QueryDocumentSnapshot document : nameResults.getDocuments()) {
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             users.add(user);
         }
         
@@ -182,10 +174,9 @@ public class UserRepository {
         
         for (QueryDocumentSnapshot document : emailResults.getDocuments()) {
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             
-            // Avoid duplicates
-            boolean alreadyAdded = users.stream().anyMatch(u -> u.getId().equals(user.getId()));
+            // Avoid duplicates - use firebaseUid for comparison since id is removed
+            boolean alreadyAdded = users.stream().anyMatch(u -> u.getFirebaseUid().equals(user.getFirebaseUid()));
             if (!alreadyAdded) {
                 users.add(user);
             }
@@ -207,7 +198,6 @@ public class UserRepository {
         List<User> users = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             users.add(user);
         }
         
@@ -227,7 +217,6 @@ public class UserRepository {
         List<User> users = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             users.add(user);
         }
         
@@ -247,10 +236,128 @@ public class UserRepository {
         List<User> users = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             User user = document.toObject(User.class);
-            user.setId(document.getId());
             users.add(user);
         }
         
         return users;
+    }
+
+    /**
+     * Update user by Firebase UID
+     */
+    public void updateByFirebaseUid(String firebaseUid, User user) throws ExecutionException, InterruptedException {
+        // First find the user by Firebase UID to get the document ID
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("firebaseUid", firebaseUid).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            String documentId = document.getId();
+            firestoreService.saveWithId(COLLECTION_NAME, documentId, user);
+        }
+    }
+
+    /**
+     * Delete user by Firebase UID
+     */
+    public void deleteByFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
+        // First find the user by Firebase UID to get the document ID
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("firebaseUid", firebaseUid).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            String documentId = document.getId();
+            firestoreService.delete(COLLECTION_NAME, documentId);
+        }
+    }
+
+    /**
+     * Find users by Firebase UIDs
+     */
+    public List<User> findByFirebaseUids(List<String> firebaseUids) throws ExecutionException, InterruptedException {
+        List<User> users = new ArrayList<>();
+        
+        if (firebaseUids == null || firebaseUids.isEmpty()) {
+            return users;
+        }
+
+        // Firestore "in" queries are limited to 10 items
+        int batchSize = 10;
+        for (int i = 0; i < firebaseUids.size(); i += batchSize) {
+            List<String> batch = firebaseUids.subList(i, Math.min(i + batchSize, firebaseUids.size()));
+            
+            CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+            Query query = collection.whereIn("firebaseUid", batch);
+            
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            QuerySnapshot snapshot = querySnapshot.get();
+            
+            for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
+                User user = document.toObject(User.class);
+                users.add(user);
+            }
+        }
+        
+        return users;
+    }
+
+    /**
+     * Save user and return the document ID
+     */
+    public String saveUser(User user) throws ExecutionException, InterruptedException {
+        return firestoreService.save(COLLECTION_NAME, user);
+    }
+
+    /**
+     * Save user with specific document ID
+     */
+    public void saveUserWithId(String documentId, User user) throws ExecutionException, InterruptedException {
+        firestoreService.saveWithId(COLLECTION_NAME, documentId, user);
+    }
+
+    /**
+     * Update user by document ID
+     */
+    public void updateUser(String documentId, User user) throws ExecutionException, InterruptedException {
+        firestoreService.saveWithId(COLLECTION_NAME, documentId, user);
+    }
+
+    /**
+     * Delete user by document ID
+     */
+    public void deleteUser(String documentId) throws ExecutionException, InterruptedException {
+        firestoreService.delete(COLLECTION_NAME, documentId);
+    }
+
+    /**
+     * Find user by document ID
+     */
+    public User findUserById(String documentId) throws ExecutionException, InterruptedException {
+        return firestoreService.findById(COLLECTION_NAME, documentId, User.class);
+    }
+
+    /**
+     * Find User document ID by Firebase UID
+     */
+    public String findUserDocumentIdByFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("firebaseUid", firebaseUid).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            return document.getId();
+        }
+        
+        return null;
     }
 }

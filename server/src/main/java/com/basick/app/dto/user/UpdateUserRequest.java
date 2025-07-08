@@ -1,7 +1,6 @@
 package com.basick.app.dto.user;
 
 import java.util.List;
-import com.google.cloud.Timestamp;
 
 /**
  * Request DTO for updating a User
@@ -22,7 +21,7 @@ public class UpdateUserRequest {
     private Boolean workoutRemindersEnabled;
     private Boolean socialNotificationsEnabled;
     private String subscriptionType;
-    private Timestamp subscriptionExpiresAt;
+    private String subscriptionExpiresAt;
 
     // Constructors
     public UpdateUserRequest() {}
@@ -73,6 +72,6 @@ public class UpdateUserRequest {
     public String getSubscriptionType() { return subscriptionType; }
     public void setSubscriptionType(String subscriptionType) { this.subscriptionType = subscriptionType; }
     
-    public Timestamp getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
-    public void setSubscriptionExpiresAt(Timestamp subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
+    public String getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(String subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 }

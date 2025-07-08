@@ -1,13 +1,18 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import { useEffect } from 'react'
+import useAuthStore from './store/authStore'
+import AppWithChatBubble from './components/AppWithChatBubble'
 
 function App() {
+  const { initialize } = useAuthStore();
+  
+  useEffect(() => {
+    // Initialize authentication state when app starts
+    initialize();
+  }, [initialize]);
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <h1 className="text-3xl font-bold text-blue-600">Hello Vite + React + Tailwind!</h1>
-    </div>
+    <AppWithChatBubble />
   )
 }
 

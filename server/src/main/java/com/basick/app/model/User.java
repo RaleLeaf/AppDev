@@ -5,11 +5,9 @@ import java.util.List;
 import com.google.cloud.Timestamp;
 
 public class User {
-    protected String id;
     protected String firebaseUid; // Firebase authentication UID
     protected String name;
     protected String email;
-    protected String password; // Encrypted password for email auth
     protected String phoneNumber;
     protected Boolean isEmailVerified;
     protected Boolean isPhoneVerified;
@@ -60,11 +58,9 @@ public class User {
     }
 
     // Setters
-    public void setId(String id) { this.id = id; }
     public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
-    public void setPassword(String password) { this.password = password; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public void setIsEmailVerified(Boolean isEmailVerified) { this.isEmailVerified = isEmailVerified; }
     public void setIsPhoneVerified(Boolean isPhoneVerified) { this.isPhoneVerified = isPhoneVerified; }
@@ -85,11 +81,9 @@ public class User {
     public void setSubscriptionExpiresAt(Timestamp subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
     
     // Getters
-    public String getId() { return id; }
     public String getFirebaseUid() { return firebaseUid; }
     public String getName() { return name; }
     public String getEmail() { return email; }
-    public String getPassword() { return password; }
     public String getPhoneNumber() { return phoneNumber; }
     public Boolean getIsEmailVerified() { return isEmailVerified; }
     public Boolean getIsPhoneVerified() { return isPhoneVerified; }

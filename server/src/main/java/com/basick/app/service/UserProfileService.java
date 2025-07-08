@@ -3,10 +3,16 @@ package com.basick.app.service;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.basick.app.dto.userprofile.*;
+import com.basick.app.dto.userprofile.AddAchievementRequest;
+import com.basick.app.dto.userprofile.CreateUserProfileRequest;
+import com.basick.app.dto.userprofile.UpdateFitnessGoalsRequest;
+import com.basick.app.dto.userprofile.UpdateFitnessMetricsRequest;
+import com.basick.app.dto.userprofile.UpdatePrivacySettingsRequest;
+import com.basick.app.dto.userprofile.UpdateProfilePictureRequest;
+import com.basick.app.dto.userprofile.UpdateUserProfileRequest;
+import com.basick.app.dto.userprofile.UserProfileDTO;
 import com.basick.app.mapper.UserProfileMapper;
 import com.basick.app.model.UserProfile;
 import com.basick.app.repository.UserProfileRepository;
@@ -21,7 +27,6 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserProfileMapper userProfileMapper;
 
-    @Autowired
     public UserProfileService(UserProfileRepository userProfileRepository, UserProfileMapper userProfileMapper) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
@@ -44,7 +49,7 @@ public class UserProfileService {
     }
 
     /**
-     * Get user profile by user ID
+     * Get user profile by User document ID
      */
     public UserProfileDTO getUserProfileByUserId(String userId) throws ExecutionException, InterruptedException {
         UserProfile userProfile = userProfileRepository.findByUserId(userId);
@@ -67,8 +72,7 @@ public class UserProfileService {
         userProfile.setCreatedAt(Timestamp.now());
         userProfile.setUpdatedAt(Timestamp.now());
         
-        String userProfileId = userProfileRepository.save(userProfile);
-        userProfile.setId(userProfileId);
+        userProfileRepository.save(userProfile);
         
         return userProfileMapper.toUserProfileDTO(userProfile);
     }

@@ -5,7 +5,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.basick.app.dto.userprofile.*;
+import com.basick.app.dto.userprofile.CreateUserProfileRequest;
+import com.basick.app.dto.userprofile.UpdateUserProfileRequest;
+import com.basick.app.dto.userprofile.UserProfileDTO;
 import com.basick.app.model.UserProfile;
 import com.google.cloud.Timestamp;
 
@@ -36,7 +38,6 @@ public class UserProfileMapper {
         UserProfileDTO userProfileDTO = new UserProfileDTO();
         
         // Copy inherited User fields
-        userProfileDTO.setId(userProfile.getId());
         userProfileDTO.setFirebaseUid(userProfile.getFirebaseUid());
         userProfileDTO.setName(userProfile.getName());
         userProfileDTO.setEmail(userProfile.getEmail());
@@ -228,7 +229,6 @@ public class UserProfileMapper {
         if (!userProfile.getIsProfilePublic()) {
             // Return minimal information for private profiles
             UserProfileDTO userProfileDTO = new UserProfileDTO();
-            userProfileDTO.setId(userProfile.getId());
             userProfileDTO.setUserId(userProfile.getUserId());
             userProfileDTO.setUsername(userProfile.getUsername());
             userProfileDTO.setDisplayName(userProfile.getDisplayName());

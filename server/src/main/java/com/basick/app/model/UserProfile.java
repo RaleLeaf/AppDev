@@ -1,8 +1,9 @@
 package com.basick.app.model;
 
-import com.google.cloud.Timestamp;
 import java.util.List;
 import java.util.Map;
+
+import com.google.cloud.Timestamp;
 
 /**
  * UserProfile model extending User with additional fitness and social features.
@@ -11,7 +12,7 @@ import java.util.Map;
  */
 public class UserProfile extends User {
     // Additional profile fields beyond User
-    private String userId;  // Reference to User entity for linking
+    private String userId;  // Reference to User document ID for linking
     private String username;
     private String displayName;
     private String firstName;
@@ -78,7 +79,7 @@ public class UserProfile extends User {
     }
 
     // Getters and Setters for UserProfile-specific fields
-    // Note: Basic User fields (id, email, name, etc.) are inherited
+    // Note: Basic User fields (firebaseUid, email, name, etc.) are inherited
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }

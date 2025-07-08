@@ -25,6 +25,9 @@ import AuthDemo from './dev/AuthDemo.jsx';
 import ApiTester from './dev/ApiTester.jsx';
 import FirestoreTester from './dev/FirestoreTester.jsx';
 import DevDashboard from './dev/DevDashboard.jsx';
+import AuthTester from './dev/AuthTester.jsx';
+import LastLoginDebugger from './dev/LastLoginDebugger.jsx';
+import UserIdTest from './dev/UserIdTest.jsx';
 
 function AppWithChatBubble() {
   const location = useLocation();
@@ -71,6 +74,9 @@ function AppWithChatBubble() {
         <Route path="/auth-demo" element={<AuthDemo />} />
         <Route path="/api-tester" element={<ApiTester />} />
         <Route path="/firestore-tester" element={<FirestoreTester />} />
+        <Route path="/auth-tester" element={<AuthTester />} />
+        <Route path="/lastlogin-debugger" element={<LastLoginDebugger />} />
+        <Route path="/user-id-test" element={<UserIdTest />} />
       </Routes>
     </>
   );

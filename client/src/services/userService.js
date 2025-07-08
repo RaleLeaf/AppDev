@@ -146,6 +146,17 @@ class UserService {
     }
   }
 
+  // Update user's last login timestamp
+  async updateLastLogin(firebaseUid) {
+    try {
+      const response = await api.patch(`/api/users/firebase/${firebaseUid}/last-login`);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating last login:', error);
+      throw this.handleError(error);
+    }
+  }
+
   // Update notification preferences
   async updateNotificationPreferences(userId, preferences) {
     try {

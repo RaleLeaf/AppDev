@@ -45,7 +45,9 @@ public class FirestoreService {
         DocumentSnapshot document = future.get();
         
         if (document.exists()) {
-            return document.toObject(clazz);
+            T object = document.toObject(clazz);
+            // Note: User model no longer has an id field - firebaseUid is the identifier
+            return object;
         }
         return null;
     }
@@ -56,7 +58,9 @@ public class FirestoreService {
         
         List<T> results = new ArrayList<>();
         for (QueryDocumentSnapshot document : documents) {
-            results.add(document.toObject(clazz));
+            T object = document.toObject(clazz);
+            // Note: User model no longer has an id field - firebaseUid is the identifier
+            results.add(object);
         }
         return results;
     }
@@ -69,7 +73,9 @@ public class FirestoreService {
         
         List<T> results = new ArrayList<>();
         for (QueryDocumentSnapshot document : documents) {
-            results.add(document.toObject(clazz));
+            T object = document.toObject(clazz);
+            // Note: User model no longer has an id field - firebaseUid is the identifier
+            results.add(object);
         }
         return results;
     }
@@ -95,8 +101,12 @@ public class FirestoreService {
         }
 
         db.runTransaction(transaction -> {
-            Long current = transaction.get(counterRef).get().contains("value") ?
-                transaction.get(counterRef).get().getLong("value") : 0L;
+            DocumentSnapshot transactionSnapshot = transaction.get(counterRef).get();
+            Long current = 0L;
+            if (transactionSnapshot.contains("value")) {
+                Long value = transactionSnapshot.getLong("value");
+                current = value != null ? value : 0L;
+            }
             Long next = current + 1;
             transaction.update(counterRef, "value", next);
             return next;
@@ -161,10 +171,10 @@ public class FirestoreService {
     public static class BatchOperation {
         public enum Type { SET, UPDATE, DELETE }
         
-        private String collection;
-        private String documentId;
-        private Map<String, Object> data;
-        private Type type;
+        private final String collection;
+        private final String documentId;
+        private final Map<String, Object> data;
+        private final Type type;
 
         public BatchOperation(String collection, String documentId, Map<String, Object> data, Type type) {
             this.collection = collection;

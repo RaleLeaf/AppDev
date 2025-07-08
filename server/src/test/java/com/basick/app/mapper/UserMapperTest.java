@@ -34,7 +34,6 @@ class UserMapperTest {
     void testToDTO_WithValidUser_ShouldReturnUserDTO() {
         // Given
         User user = new User("firebase123", "John Doe", "john@example.com", "EMAIL", "USER");
-        user.setId("user123");
         user.setPhoneNumber("+1234567890");
         user.setIsEmailVerified(true);
         user.setIsPhoneVerified(false);
@@ -53,7 +52,6 @@ class UserMapperTest {
 
         // Then
         assertNotNull(result);
-        assertEquals("user123", result.getId());
         assertEquals("firebase123", result.getFirebaseUid());
         assertEquals("John Doe", result.getName());
         assertEquals("john@example.com", result.getEmail());
@@ -89,7 +87,6 @@ class UserMapperTest {
         request.setFirebaseUid("firebase123");
         request.setName("Jane Doe");
         request.setEmail("jane@example.com");
-        request.setPassword("password123");
         request.setPhoneNumber("+1234567890");
         request.setAuthType("GOOGLE");
         request.setRole("TRAINER");
@@ -110,7 +107,6 @@ class UserMapperTest {
         assertEquals("firebase123", result.getFirebaseUid());
         assertEquals("Jane Doe", result.getName());
         assertEquals("jane@example.com", result.getEmail());
-        assertEquals("password123", result.getPassword());
         assertEquals("+1234567890", result.getPhoneNumber());
         assertEquals("GOOGLE", result.getAuthType());
         assertEquals("TRAINER", result.getRole());
@@ -210,9 +206,7 @@ class UserMapperTest {
     void testToDTOList_WithValidUserList_ShouldReturnUserDTOList() {
         // Given
         User user1 = new User("firebase1", "User One", "user1@example.com", "EMAIL", "USER");
-        user1.setId("1");
         User user2 = new User("firebase2", "User Two", "user2@example.com", "GOOGLE", "TRAINER");
-        user2.setId("2");
         List<User> users = Arrays.asList(user1, user2);
 
         // When
@@ -221,9 +215,9 @@ class UserMapperTest {
         // Then
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals("1", result.get(0).getId());
+        assertEquals("firebase1", result.get(0).getFirebaseUid());
         assertEquals("User One", result.get(0).getName());
-        assertEquals("2", result.get(1).getId());
+        assertEquals("firebase2", result.get(1).getFirebaseUid());
         assertEquals("User Two", result.get(1).getName());
     }
 

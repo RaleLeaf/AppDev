@@ -20,6 +20,7 @@ const ApiTester = () => {
     { name: 'Get Current User', method: 'GET', url: `/api/users/${user?.id || 'USER_ID'}` },
     { name: 'Search Users', method: 'GET', url: '/api/users/search?query=test' },
     { name: 'Get User by Firebase UID', method: 'GET', url: `/api/users/firebase/${user?.uid || 'FIREBASE_UID'}` },
+    { name: 'Update Last Login', method: 'PATCH', url: `/api/users/${user?.id || 'USER_ID'}/last-login` },
     { name: 'Create User', method: 'POST', url: '/api/users', body: JSON.stringify({
       firebaseUid: 'test-uid',
       name: 'Test User',

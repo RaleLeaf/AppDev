@@ -6,7 +6,6 @@ import java.util.List;
  * Data Transfer Object for User
  */
 public class UserDTO {
-    private String id;
     private String firebaseUid;
     private String name;
     private String email;
@@ -33,9 +32,6 @@ public class UserDTO {
     public UserDTO() {}
 
     // Getters and Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
     public String getFirebaseUid() { return firebaseUid; }
     public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
 

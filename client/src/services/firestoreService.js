@@ -36,7 +36,8 @@ class FirestoreService {
         goals: userData.goals || [],
         preferences: userData.preferences || {},
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
       };
 
       await setDoc(userRef, userDoc);
@@ -149,6 +150,21 @@ class FirestoreService {
     } catch (error) {
       console.error('Error updating notification settings:', error);
       throw new Error(`Failed to update notification settings: ${error.message}`);
+    }
+  }
+
+  // Update last login timestamp
+  async updateLastLogin(uid) {
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        lastLoginAt: serverTimestamp()
+        // Don't update updatedAt for lastLogin - only for actual user data changes
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating last login:', error);
+      throw new Error(`Failed to update last login: ${error.message}`);
     }
   }
 }

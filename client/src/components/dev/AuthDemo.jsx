@@ -93,6 +93,8 @@ const AuthDemo = () => {
             <p><span className="font-medium">Auth Type:</span> {user?.authType || 'N/A'}</p>
             <p><span className="font-medium">Role:</span> {user?.role || 'N/A'}</p>
             <p><span className="font-medium">Subscription:</span> {user?.subscriptionType || 'N/A'}</p>
+            <p><span className="font-medium">Last Login:</span> {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'N/A'}</p>
+            <p><span className="font-medium">Account Created:</span> {user?.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A'}</p>
           </div>
         </div>
 

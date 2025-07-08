@@ -52,6 +52,7 @@ A comprehensive tool for testing Firebase Firestore operations and document mana
 - Update user documents with test data
 - Check if user documents exist
 - Update user profile information
+- **Test lastLoginAt timestamp updates**
 - Real-time operation results display
 - Error handling and debugging
 
@@ -60,6 +61,7 @@ A comprehensive tool for testing Firebase Firestore operations and document mana
 - Debug user document creation and updates
 - Validate Firestore service functions
 - Test data synchronization between Firebase Auth and Firestore
+- **Verify lastLoginAt tracking functionality**
 
 ### 🏠 Developer Dashboard (`/dev`)
 **File:** `DevDashboard.jsx`
@@ -206,3 +208,54 @@ Potential additions to the developer tools:
 - Log viewer
 - Database query tool
 - Email/notification tester
+
+## LastLoginAt Implementation
+
+The `lastLoginAt` attribute has been implemented across the entire authentication flow to track when users last accessed the application.
+
+### Implementation Details
+
+**Backend Integration:**
+- `userService.updateLastLogin(userId)` - Updates backend user record
+- API endpoint: `PATCH /api/users/{userId}/last-login`
+- Automatically called during all authentication flows
+
+**Firestore Integration:**
+- `firestoreService.updateLastLogin(uid)` - Updates Firestore user document
+- Uses `serverTimestamp()` for consistent timing
+- Fallback when backend is unavailable
+
+**Authentication Flows:**
+- **Email/Password Login:** Updates lastLoginAt on successful authentication
+- **Google Sign-in:** Updates lastLoginAt for both new and existing users
+- **Session Restoration:** Updates lastLoginAt when app initializes with existing session
+- **User Registration:** Sets initial lastLoginAt timestamp
+
+**Developer Tools:**
+- **AuthDemo:** Displays formatted lastLoginAt timestamp
+- **FirestoreTester:** Test lastLoginAt updates independently
+- **ApiTester:** Quick test for backend lastLoginAt endpoint
+
+### Testing LastLoginAt
+
+1. **Via Authentication Demo (`/auth-demo`):**
+   - View current user's lastLoginAt timestamp
+   - See formatted date/time display
+
+2. **Via Firestore Tester (`/firestore-tester`):**
+   - Use "Update Last Login" button to test Firestore updates
+   - View operation results in real-time
+
+3. **Via API Tester (`/api-tester`):**
+   - Use "Update Last Login" quick test for backend API
+   - Test with custom user IDs
+
+### Data Flow
+```
+Login/Authentication → Update Backend lastLoginAt → Update Firestore lastLoginAt → User State Updated
+```
+
+## Best Practices
+- Ensure `lastLoginAt` is updated on every login and session restoration
+- Use Firestore and backend API tools to verify `lastLoginAt` functionality
+- Regularly check user documents for accurate `lastLoginAt` timestamps
