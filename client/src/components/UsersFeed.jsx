@@ -6,6 +6,7 @@ import CommentModal from './CommentModal';
 import ShareModal from './ShareModal';
 import PostModal from './PostModal';
 import useAuthStore from '../store/authStore';
+import { likeAPI, commentAPI } from '../services/api';
 
 const UsersFeed = () => {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ const UsersFeed = () => {
 
   // Enhanced feed data with more details
   const [posts, setPosts] = useState([]);
+  
+  // Track posts being liked to prevent multiple simultaneous requests
+  const [likingPosts, setLikingPosts] = useState(new Set());
 
   // Load user name (same logic as HomePage)
   useEffect(() => {
@@ -247,9 +251,16 @@ const UsersFeed = () => {
           const apiPosts = await response.json();
           console.log('Fetched posts from API:', apiPosts);
           
-          // Transform API posts to match UI format
-          const transformedPosts = apiPosts.map(post => {
+          // Transform API posts to match UI format and fetch like/comment counts
+          const transformedPosts = await Promise.all(apiPosts.map(async (post) => {
             console.log('Processing post:', post.id, 'with tags:', post.tags);
+            
+            // Get like and comment counts
+            const [likeCount, commentCount, hasLiked] = await Promise.all([
+              likeAPI.getLikeCount(post.id).catch(() => 0),
+              commentAPI.getCommentCount(post.id).catch(() => 0),
+              likeAPI.hasUserLikedPost(user?.uid || localStorage.getItem('firebaseUid'), post.id).catch(() => false)
+            ]);
             
             return {
               id: post.id,
@@ -263,14 +274,14 @@ const UsersFeed = () => {
               content: post.content,
               title: post.title,
               image: post.imageUrls?.[0] || null,
-              likes: post.likesCount || 0,
-              comments: post.commentsCount || 0,
+              likes: likeCount,
+              comments: commentCount,
               shares: post.sharesCount || 0,
-              hasLiked: post.likedBy?.includes(user?.uid) || false,
+              hasLiked: hasLiked,
               tags: Array.isArray(post.tags) ? post.tags : (post.tags ? [post.tags] : []),
               location: post.location
             };
-          });
+          }));
 
           console.log('Transformed posts:', transformedPosts);
           setPosts(transformedPosts);
@@ -289,6 +300,101 @@ const UsersFeed = () => {
 
     fetchPosts();
   }, [user]);
+
+  // Fixed handle like/unlike with debouncing and request tracking
+  const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+    try {
+      const userId = user?.uid || user?.firebaseUid || localStorage.getItem('firebaseUid');
+      if (!userId) {
+        console.error('No user ID available for liking');
+        return;
+      }
+
+      // Prevent multiple simultaneous requests for the same post
+      if (likingPosts.has(postId)) {
+        console.log('Like request already in progress for post:', postId);
+        return;
+      }
+
+      // Add post to "being liked" set
+      setLikingPosts(prev => new Set(prev).add(postId));
+
+      // Get current post state (in case it changed since render)
+      const currentPost = posts.find(p => p.id === postId);
+      if (!currentPost) {
+        setLikingPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
+        });
+        return;
+      }
+
+      const actualCurrentLikeState = currentPost.hasLiked;
+      const currentLikeCount = currentPost.likes;
+
+      let success = false;
+      let newLikeState = actualCurrentLikeState;
+      let newLikeCount = currentLikeCount;
+
+      try {
+        if (actualCurrentLikeState) {
+          // Unlike the post
+          success = await likeAPI.unlikePost(userId, postId);
+          if (success) {
+            newLikeState = false;
+            newLikeCount = Math.max(0, currentLikeCount - 1); // Prevent negative likes
+          }
+        } else {
+          // Like the post
+          const likeResult = await likeAPI.likePost(userId, postId);
+          success = !!likeResult;
+          if (success) {
+            newLikeState = true;
+            newLikeCount = currentLikeCount + 1;
+          }
+        }
+
+        if (success) {
+          // Update the posts state only after successful API call
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === postId 
+                ? {
+                    ...post,
+                    hasLiked: newLikeState,
+                    likes: newLikeCount
+                  }
+                : post
+            )
+          );
+
+          // Update comment modal post if it's open
+          if (commentModalPost && commentModalPost.id === postId) {
+            setCommentModalPost(prev => ({
+              ...prev,
+              hasLiked: newLikeState,
+              likes: newLikeCount
+            }));
+          }
+        } else {
+          console.error('Like/unlike operation failed');
+        }
+      } catch (error) {
+        console.error('Error toggling like:', error);
+        // Don't update UI state on error - keep original state
+      }
+    } catch (error) {
+      console.error('Error in handleLikeToggle:', error);
+    } finally {
+      // Always remove post from "being liked" set
+      setLikingPosts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(postId);
+        return newSet;
+      });
+    }
+  };
 
   // Helper function to format timestamp
   const formatTimestamp = (timestamp) => {
@@ -321,7 +427,11 @@ const UsersFeed = () => {
     // Ensure tags are properly formatted
     const processedPost = {
       ...newPost,
-      tags: Array.isArray(newPost.tags) ? newPost.tags : (newPost.tags ? [newPost.tags] : [])
+      tags: Array.isArray(newPost.tags) ? newPost.tags : (newPost.tags ? [newPost.tags] : []),
+      hasLiked: false,
+      likes: 0,
+      comments: 0,
+      shares: 0
     };
     
     console.log('Processed post:', processedPost);
@@ -434,7 +544,7 @@ const UsersFeed = () => {
             ))}
           </div>
 
-          {/* Posts Feed - Improved for mobile */}
+          {/* Posts Feed - Updated with loading states */}
           <div className="flex-1">
             {posts.length === 0 ? (
               <div className="text-center py-12">
@@ -444,6 +554,7 @@ const UsersFeed = () => {
             ) : (
               posts.map(post => {
                 console.log('Rendering post:', post.id, 'with tags:', post.tags);
+                const isLiking = likingPosts.has(post.id);
                 
                 return (
                   <div key={post.id} className="mx-3 md:mx-4 mb-4 md:mb-5 bg-zinc-900 rounded-lg overflow-hidden shadow-md md:hover:shadow-xl transition-all md:border border-zinc-800/50 md:hover:border-zinc-700/50">
@@ -546,14 +657,27 @@ const UsersFeed = () => {
                       )}
                     </div>
 
-                    {/* Post Actions - Improved for mobile */}
+                    {/* Post Actions - Fixed with loading state and disabled state */}
                     <div className="flex p-1 md:p-3 border-t border-zinc-800/50">
-                      {/* Like Button */}
-                      <button className={`flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors ${post.hasLiked ? 'text-red-500' : ''}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 md:h-6 md:w-6 mr-1 ${post.hasLiked ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={post.hasLiked ? 0 : 2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                        <span className={`text-sm md:text-base ${post.hasLiked ? 'font-medium' : ''}`}>Like</span>
+                      {/* Like Button - Fixed */}
+                      <button 
+                        className={`flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors ${
+                          post.hasLiked ? 'text-red-500' : 'text-zinc-300'
+                        } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={() => handleLikeToggle(post.id, post.hasLiked)}
+                        disabled={isLiking}
+                      >
+                        {isLiking ? (
+                          // Show loading spinner when liking
+                          <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-current mr-1"></div>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 md:h-6 md:w-6 mr-1 ${post.hasLiked ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={post.hasLiked ? 0 : 2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        )}
+                        <span className={`text-sm md:text-base ${post.hasLiked ? 'font-medium' : ''}`}>
+                          {isLiking ? 'Liking...' : 'Like'}
+                        </span>
                       </button>
 
                       {/* Comment Button */}
@@ -631,6 +755,7 @@ const UsersFeed = () => {
                 setShareModalPost(post);
                 setCommentModalPost(null);
               }}
+              onLikeToggle={handleLikeToggle}
             />
 
             <ShareModal
