@@ -144,4 +144,157 @@ api.interceptors.response.use(
   }
 );
 
+export const likeAPI = {
+  // Like a post
+  likePost: async (userId, postId) => {
+    try {
+      const response = await api.post('/api/likes', {
+        userId,
+        postId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error liking post:', error);
+      throw error;
+    }
+  },
+
+  // Unlike a post
+  unlikePost: async (userId, postId) => {
+    try {
+      const response = await api.delete(`/api/likes/user/${userId}/post/${postId}`);
+      return response.status === 204;
+    } catch (error) {
+      console.error('Error unliking post:', error);
+      throw error;
+    }
+  },
+
+  // Check if user has liked a post
+  hasUserLikedPost: async (userId, postId) => {
+    try {
+      const response = await api.get(`/api/likes/user/${userId}/post/${postId}/exists`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking like status:', error);
+      return false;
+    }
+  },
+
+  // Get like count for a post
+  getLikeCount: async (postId) => {
+    try {
+      const response = await api.get(`/api/likes/post/${postId}/count`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting like count:', error);
+      return 0;
+    }
+  }
+};
+
+// Comment API functions
+export const commentAPI = {
+  // Get comments for a post
+  getComments: async (postId) => {
+    try {
+      const response = await api.get(`/api/comments/post/${postId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      return [];
+    }
+  },
+  updateCommentUserInfo: async (commentId, userInfo) => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/comments/${commentId}/user-info`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userInfo),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error updating comment user info:', error);
+      return false;
+    }
+  },
+
+  // Create a comment
+  createComment: async (userId, postId, content) => {
+    try {
+      const response = await api.post('/api/comments', {
+        userId,
+        postId,
+        content
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      throw error;
+    }
+  },
+
+  // Get comment count for a post
+  getCommentCount: async (postId) => {
+    try {
+      const response = await api.get(`/api/comments/post/${postId}/count`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting comment count:', error);
+      return 0;
+    }
+  },
+
+  // Delete a comment
+  deleteComment: async (commentId) => {
+    try {
+      const response = await api.delete(`/api/comments/${commentId}`);
+      return response.status === 204;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      throw error;
+    }
+  }
+};
+
+// User Profile API functions
+export const userProfileAPI = {
+  // Get user profile
+  getUserProfile: async (userId) => {
+    try {
+      const response = await api.get(`/api/users/${userId}/profile`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  },
+
+  // Update user profile
+  updateUserProfile: async (userId, profileData) => {
+    try {
+      const response = await api.put(`/api/users/${userId}/profile`, profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  },
+
+  // Create user profile
+  createUserProfile: async (profileData) => {
+    try {
+      const response = await api.post(`/api/users/${profileData.userId}/profile`, profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      throw error;
+    }
+  }
+};
+
 export default api;
