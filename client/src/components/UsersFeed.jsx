@@ -24,6 +24,9 @@ const UsersFeed = () => {
   // Track posts being liked to prevent multiple simultaneous requests
   const [likingPosts, setLikingPosts] = useState(new Set());
 
+  // ADD THIS: Refresh trigger for inline comments
+  const [commentRefreshTrigger, setCommentRefreshTrigger] = useState(0);
+
   // Load user name (same logic as HomePage)
   useEffect(() => {
     const getUserName = () => {
@@ -396,6 +399,83 @@ const UsersFeed = () => {
     }
   };
 
+  // Handle adding inline comments (for desktop)
+  const handleInlineComment = async (postId, content) => {
+    try {
+      const userId = user?.uid || user?.firebaseUid || localStorage.getItem('firebaseUid');
+      if (!userId || !content.trim()) {
+        console.error('No user ID or empty content for inline comment');
+        return null;
+      }
+
+      console.log('Creating inline comment for post:', postId, 'content:', content.trim());
+      
+      // Create comment with user info
+      const newComment = await commentAPI.createComment(userId, postId, content.trim());
+      console.log('Created inline comment:', newComment);
+
+      // Get current user info for the comment
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const currentUserName = userData.name || localStorage.getItem('userName') || userName || 'User';
+      const currentUserAvatar = getCurrentUserAvatar();
+
+      // Update the comment with user info locally (in case API doesn't return it)
+      const enhancedComment = {
+        ...newComment,
+        userName: currentUserName,
+        userAvatar: currentUserAvatar,
+        userId: userId
+      };
+
+      // Also update the backend comment with user info if needed
+      try {
+        await commentAPI.updateCommentUserInfo(newComment.id, {
+          userName: currentUserName,
+          userAvatar: currentUserAvatar
+        });
+      } catch (error) {
+        console.log('Could not update comment user info in backend:', error);
+      }
+
+      // Update the post's comment count
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { ...post, comments: post.comments + 1 }
+            : post
+        )
+      );
+
+      return enhancedComment;
+    } catch (error) {
+      console.error('Error creating inline comment:', error);
+      return null;
+    }
+  };
+
+  // Handle comment modal closure with count update and refresh trigger
+  const handleCommentModalClose = () => {
+    // Refresh comment count when modal closes
+    if (commentModalPost) {
+      const postId = commentModalPost.id;
+      commentAPI.getCommentCount(postId)
+        .then(count => {
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === postId 
+                ? { ...post, comments: count }
+                : post
+            )
+          );
+          
+          // TRIGGER REFRESH for inline comments
+          setCommentRefreshTrigger(prev => prev + 1);
+        })
+        .catch(error => console.error('Error updating comment count:', error));
+    }
+    setCommentModalPost(null);
+  };
+
   // Helper function to format timestamp
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Just now';
@@ -702,47 +782,22 @@ const UsersFeed = () => {
                       </button>
                     </div>
 
-                    {/* Comments Preview - Desktop only */}
-                    <div className="hidden md:block border-t border-zinc-800/50 p-4">
-                      {post.comments > 0 && (
-                        <div className="mb-3">
-                          <div className="flex items-start mb-2">
-                            <div className="w-7 h-7 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                              <img
-                                src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200"
-                                alt="Commenter"
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="bg-zinc-800/70 rounded-2xl px-3 py-2 text-sm">
-                              <p className="font-medium text-xs text-white/90">Jessica Miller</p>
-                              <p className="text-white/80">Looking great! What's your weekly routine like?</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex">
-                        <div className="w-8 h-8 rounded-full overflow-hidden mr-3 flex-shrink-0">
-                          <img
-                            src={getCurrentUserAvatar()}
-                            alt="Your Profile"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 bg-zinc-800 rounded-full px-4 py-2 flex items-center">
-                          <input
-                            type="text"
-                            placeholder="Add a comment..."
-                            className="bg-transparent w-full focus:outline-none text-sm"
-                          />
-                          <button className="ml-2 text-lime-500 hover:text-lime-400 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Comments Preview - Desktop only - UPDATED with refresh trigger */}
+                    <InlineCommentSection 
+                      post={post}
+                      onCommentSubmit={handleInlineComment}
+                      getCurrentUserAvatar={getCurrentUserAvatar}
+                      refreshTrigger={commentRefreshTrigger}
+                      onUpdateCommentCount={(postId, newCount) => {
+                        setPosts(prevPosts => 
+                          prevPosts.map(p => 
+                            p.id === postId 
+                              ? { ...p, comments: newCount }
+                              : p
+                          )
+                        );
+                      }}
+                    />
                   </div>
                 );
               })
@@ -750,7 +805,7 @@ const UsersFeed = () => {
 
             <CommentModal
               post={commentModalPost}
-              onClose={() => setCommentModalPost(null)}
+              onClose={handleCommentModalClose}
               onShare={(post) => {
                 setShareModalPost(post);
                 setCommentModalPost(null);
@@ -803,6 +858,257 @@ const UsersFeed = () => {
           display: none;
         }
       `}</style>
+    </div>
+  );
+};
+
+// Inline Comment Section Component (for desktop) - UPDATED WITH REFRESH CAPABILITY
+const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onUpdateCommentCount, refreshTrigger }) => {
+  const { user } = useAuthStore();
+  const [inlineComment, setInlineComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
+  
+  // Cache for user info to avoid repeated API calls
+  const [userInfoCache, setUserInfoCache] = useState({});
+
+  // Function to get user info by ID
+  const getUserInfo = async (userId) => {
+    // Check cache first
+    if (userInfoCache[userId]) {
+      return userInfoCache[userId];
+    }
+
+    try {
+      const authToken = localStorage.getItem('authToken') || user?.accessToken;
+      if (!authToken) {
+        return { name: 'User', avatar: 'https://via.placeholder.com/28x28/374151/ffffff?text=U' };
+      }
+
+      const response = await fetch(`http://localhost:8080/api/users/firebase/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        const userInfo = {
+          name: userData.name || userData.firstName || userData.displayName || 'User',
+          avatar: userData.profilePictureUrl || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'
+        };
+        
+        // Cache the result
+        setUserInfoCache(prev => ({ ...prev, [userId]: userInfo }));
+        return userInfo;
+      }
+    } catch (error) {
+      console.error('Error fetching user info for', userId, ':', error);
+    }
+
+    // Fallback
+    const fallbackInfo = { name: 'User', avatar: 'https://via.placeholder.com/28x28/374151/ffffff?text=U' };
+    setUserInfoCache(prev => ({ ...prev, [userId]: fallbackInfo }));
+    return fallbackInfo;
+  };
+
+  // Fetch comments function
+  const fetchComments = async () => {
+    try {
+      setLoadingComments(true);
+      const fetchedComments = await commentAPI.getComments(post.id);
+      console.log('Fetched inline comments for post', post.id, ':', fetchedComments);
+      
+      // Transform comments to include proper user info
+      const transformedComments = await Promise.all(
+        fetchedComments.map(async (comment) => {
+          let userName = comment.userName;
+          let userAvatar = comment.userAvatar;
+
+          // If we don't have user info, try to get it
+          if (!userName || userName === 'Anonymous User' || !userAvatar) {
+            const userInfo = await getUserInfo(comment.userId);
+            userName = userInfo.name;
+            userAvatar = userInfo.avatar;
+          }
+
+          return {
+            ...comment,
+            userName: userName || 'User',
+            userAvatar: userAvatar || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'
+          };
+        })
+      );
+      
+      setComments(transformedComments || []);
+    } catch (error) {
+      console.error('Error fetching inline comments:', error);
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Fetch comments for this post - UPDATED to refresh on trigger
+  useEffect(() => {
+    fetchComments();
+  }, [post.id, refreshTrigger]); // Added refreshTrigger dependency
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!inlineComment.trim() || submitting) return;
+
+    try {
+      setSubmitting(true);
+      const newComment = await onCommentSubmit(post.id, inlineComment.trim());
+      
+      if (newComment) {
+        // Get current user info
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const currentUserName = userData.name || localStorage.getItem('userName') || user?.displayName || user?.name || 'You';
+        
+        const newCommentWithUser = {
+          ...newComment,
+          userName: currentUserName,
+          userAvatar: getCurrentUserAvatar(),
+          createdAt: new Date().toISOString(),
+          userId: user?.uid || user?.firebaseUid || localStorage.getItem('firebaseUid')
+        };
+        
+        setComments(prev => [...prev, newCommentWithUser]);
+        
+        // Update parent component's comment count
+        if (onUpdateCommentCount) {
+          onUpdateCommentCount(post.id, comments.length + 1);
+        }
+      }
+      
+      setInlineComment('');
+    } catch (error) {
+      console.error('Error submitting inline comment:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formatCommentTime = (timestamp) => {
+    if (!timestamp) return 'now';
+    
+    const now = new Date();
+    const commentTime = new Date(timestamp);
+    const diffInMs = now - commentTime;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 1) return 'now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInHours < 24) return `${diffInHours}h`;
+    if (diffInDays < 7) return `${diffInDays}d`;
+    return commentTime.toLocaleDateString();
+  };
+
+  const commentsToShow = showAllComments ? comments : comments.slice(-2);
+
+  return (
+    <div className="hidden md:block border-t border-zinc-800/50 p-4">
+      {/* Show actual comments if they exist */}
+      {loadingComments ? (
+        <div className="mb-3 flex justify-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-lime-500"></div>
+        </div>
+      ) : (
+        comments.length > 0 && (
+          <div className="mb-3">
+            {/* Show all comments or just last 2 */}
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {commentsToShow.map((comment, index) => (
+                <div key={comment.id || index} className="flex items-start">
+                  <div className="w-7 h-7 rounded-full overflow-hidden mr-2 flex-shrink-0">
+                    <img
+                      src={comment.userAvatar || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'}
+                      alt={comment.userName || 'User'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="bg-zinc-800/70 rounded-2xl px-3 py-2 text-sm flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-xs text-white/90">
+                        {comment.userName || 'User'}
+                      </p>
+                      <span className="text-xs text-zinc-500">
+                        {formatCommentTime(comment.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-white/80 text-xs">{comment.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Show "View more" button if there are more than 2 comments */}
+            {comments.length > 2 && !showAllComments && (
+              <button 
+                onClick={() => setShowAllComments(true)}
+                className="text-xs text-zinc-500 hover:text-zinc-400 ml-9 mt-2"
+              >
+                View all {comments.length} comments
+              </button>
+            )}
+            
+            {/* Show "Show less" button if showing all comments */}
+            {showAllComments && comments.length > 2 && (
+              <button 
+                onClick={() => setShowAllComments(false)}
+                className="text-xs text-zinc-500 hover:text-zinc-400 ml-9 mt-2"
+              >
+                Show less
+              </button>
+            )}
+          </div>
+        )
+      )}
+
+      {/* Comment input form */}
+      <form onSubmit={handleSubmit} className="flex">
+        <div className="w-8 h-8 rounded-full overflow-hidden mr-3 flex-shrink-0">
+          <img
+            src={getCurrentUserAvatar()}
+            alt="Your Profile"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="flex-1 bg-zinc-800 rounded-full px-4 py-2 flex items-center">
+          <input
+            type="text"
+            value={inlineComment}
+            onChange={(e) => setInlineComment(e.target.value)}
+            placeholder="Add a comment..."
+            className="bg-transparent w-full focus:outline-none text-sm text-white"
+            disabled={submitting}
+          />
+          <button 
+            type="submit"
+            disabled={!inlineComment.trim() || submitting}
+            className={`ml-2 transition-colors ${
+              !inlineComment.trim() || submitting 
+                ? 'text-zinc-600 cursor-not-allowed' 
+                : 'text-lime-500 hover:text-lime-400'
+            }`}
+          >
+            {submitting ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

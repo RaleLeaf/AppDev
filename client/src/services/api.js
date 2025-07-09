@@ -205,6 +205,23 @@ export const commentAPI = {
       return [];
     }
   },
+  updateCommentUserInfo: async (commentId, userInfo) => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/comments/${commentId}/user-info`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userInfo),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error updating comment user info:', error);
+      return false;
+    }
+  },
 
   // Create a comment
   createComment: async (userId, postId, content) => {
