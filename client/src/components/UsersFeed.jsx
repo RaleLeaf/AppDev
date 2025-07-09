@@ -335,7 +335,7 @@ const UsersFeed = () => {
       </div>
 
       {/* Custom scrollbar styles */}
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;

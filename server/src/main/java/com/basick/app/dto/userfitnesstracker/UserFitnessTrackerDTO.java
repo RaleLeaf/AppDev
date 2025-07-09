@@ -2,6 +2,8 @@ package com.basick.app.dto.userfitnesstracker;
 
 import com.google.cloud.Timestamp;
 
+import java.util.List;
+
 public class UserFitnessTrackerDTO {
     private String id;
     private String userId;
@@ -24,6 +26,7 @@ public class UserFitnessTrackerDTO {
     private String notes;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private List<String> doneExercises;
 
     public UserFitnessTrackerDTO() {}
 
@@ -90,4 +93,7 @@ public class UserFitnessTrackerDTO {
 
     public Timestamp getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+
+    public List<String> getDoneExercises() { return doneExercises; }
+    public void setDoneExercises(List<String> doneExercises) { this.doneExercises = doneExercises; }
 }

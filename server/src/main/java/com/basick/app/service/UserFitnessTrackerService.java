@@ -200,7 +200,7 @@ public class UserFitnessTrackerService {
                 // Create new entry with default values from request
                 CreateUserFitnessTrackerRequest createRequest = new CreateUserFitnessTrackerRequest();
                 createRequest.setUserId(userId);
-                createRequest.setTrackingDate(parseToTimestamp(date));
+                createRequest.setTrackingDate(date);
                 createRequest.setNumberOfWorkouts(request.getNumberOfWorkouts());
                 createRequest.setCaloriesConsumed(request.getCaloriesConsumed());
                 createRequest.setCaloriesBurned(request.getCaloriesBurned());

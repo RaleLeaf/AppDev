@@ -1,5 +1,7 @@
 package com.basick.app.dto.userfitnesstracker;
 
+import java.util.List;
+
 public class UpdateUserFitnessTrackerRequest {
     private Integer numberOfWorkouts;
     private Double caloriesConsumed;
@@ -16,6 +18,7 @@ public class UpdateUserFitnessTrackerRequest {
     private Double stressLevel;
     private String mood;
     private String notes;
+    private List<String> doneExercises;
 
     public UpdateUserFitnessTrackerRequest() {}
 
@@ -64,4 +67,7 @@ public class UpdateUserFitnessTrackerRequest {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public List<String> getDoneExercises() { return doneExercises; }
+    public void setDoneExercises(List<String> doneExercises) { this.doneExercises = doneExercises; }
 }

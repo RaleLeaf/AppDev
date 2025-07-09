@@ -10,6 +10,7 @@ import com.basick.app.dto.userfitnesstracker.UpdateUserFitnessTrackerRequest;
 import com.basick.app.dto.userfitnesstracker.UserFitnessTrackerDTO;
 import com.basick.app.dto.userfitnesstracker.UserFitnessSummaryDTO;
 import com.basick.app.model.UserFitnessTracker;
+import com.google.cloud.Timestamp;
 
 /**
  * Mapper class for UserFitnessTracker entity and DTOs
@@ -47,6 +48,7 @@ public class UserFitnessTrackerMapper {
         dto.setNotes(userFitnessTracker.getNotes());
         dto.setCreatedAt(userFitnessTracker.getCreatedAt());
         dto.setUpdatedAt(userFitnessTracker.getUpdatedAt());
+        dto.setDoneExercises(userFitnessTracker.getDoneExercises());
 
         return dto;
     }
@@ -74,7 +76,13 @@ public class UserFitnessTrackerMapper {
 
         UserFitnessTracker userFitnessTracker = new UserFitnessTracker();
         userFitnessTracker.setUserId(request.getUserId());
-        userFitnessTracker.setTrackingDate(request.getTrackingDate());
+
+          if (request.getTrackingDate() != null && !request.getTrackingDate().isEmpty()) {
+        userFitnessTracker.setTrackingDate(Timestamp.parseTimestamp(request.getTrackingDate()));
+        } else {
+            userFitnessTracker.setTrackingDate(Timestamp.now());
+        }
+
         userFitnessTracker.setNumberOfWorkouts(request.getNumberOfWorkouts());
         userFitnessTracker.setCaloriesConsumed(request.getCaloriesConsumed());
         userFitnessTracker.setCaloriesBurned(request.getCaloriesBurned());
@@ -160,6 +168,10 @@ public class UserFitnessTrackerMapper {
         
         if (request.getNotes() != null) {
             userFitnessTracker.setNotes(request.getNotes());
+        }
+        
+        if (request.getDoneExercises() != null) {
+            userFitnessTracker.setDoneExercises(request.getDoneExercises());
         }
     }
 
