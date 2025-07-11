@@ -11,10 +11,12 @@ export default function FitnessChat() {
   
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  // Hardcoded API key - AI always enabled
-  const apiKey = 'AIzaSyBPKqViEbhCFLY_qMtojZb8TdTkfiHxmIo';
-  const useRealAI = true;
+  
+  // Get API key from environment variables
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const useRealAI = !!apiKey; // Only enable if API key exists
   const selectedModel = 'gemini-1.5-flash';
+  
   const [userProfile, setUserProfile] = useState({
     fitnessLevel: 'beginner',
     goals: [],
@@ -109,73 +111,76 @@ export default function FitnessChat() {
   };
 
   // Fixed Google Gemini AI Response function with conversation context
-  // Replace the getGeminiResponse function with this updated version:
-const getGeminiResponse = async (userMessage) => {
-  try {
-    // Get conversation context (last 5 messages for context)
-    const recentMessages = messages.slice(-5).map(msg => 
-      `${msg.sender === 'user' ? 'User' : 'TrainerAI'}: ${msg.text}`
-    ).join('\n');
-    
-    // Check if this is the first message
-    const isFirstMessage = messages.length === 0;
-    
-    // Try to get relevant exercises first
-    let exerciseContext = '';
-    const message = userMessage.toLowerCase();
-    
-    if (message.includes('workout') || message.includes('exercise') || 
-        message.includes('chest') || message.includes('back') || 
-        message.includes('legs') || message.includes('arms') ||
-        message.includes('shoulders') || message.includes('core')) {
+  const getGeminiResponse = async (userMessage) => {
+    try {
+      if (!apiKey) {
+        throw new Error('Gemini API key not found in environment variables');
+      }
+
+      // Get conversation context (last 5 messages for context)
+      const recentMessages = messages.slice(-5).map(msg => 
+        `${msg.sender === 'user' ? 'User' : 'TrainerAI'}: ${msg.text}`
+      ).join('\n');
       
-      let filters = { difficulty: userProfile.fitnessLevel.toUpperCase() };
+      // Check if this is the first message
+      const isFirstMessage = messages.length === 0;
       
-      // Map user terms to actual database muscle groups
-      if (message.includes('chest') || message.includes('push')) {
-        filters.muscleGroup = 'Triceps'; // Closest to chest in your DB
-      } else if (message.includes('back') || message.includes('pull')) {
-        filters.muscleGroup = 'Upper Back';
-      } else if (message.includes('leg') || message.includes('squat') || message.includes('quad')) {
-        filters.muscleGroup = 'Quads';
-      } else if (message.includes('glute') || message.includes('butt')) {
-        filters.muscleGroup = 'Glutes';
-      } else if (message.includes('arm') || message.includes('bicep')) {
-        filters.muscleGroup = 'Biceps';
-      } else if (message.includes('tricep')) {
-        filters.muscleGroup = 'Triceps';
-      } else if (message.includes('core') || message.includes('abs')) {
-        filters.muscleGroup = 'Abs';
-      } else if (message.includes('shoulder') || message.includes('delt')) {
-        filters.muscleGroup = 'Delts';
-      } else if (message.includes('cardio')) {
-        filters.muscleGroup = 'Cardiovascular System';
+      // Try to get relevant exercises first
+      let exerciseContext = '';
+      const message = userMessage.toLowerCase();
+      
+      if (message.includes('workout') || message.includes('exercise') || 
+          message.includes('chest') || message.includes('back') || 
+          message.includes('legs') || message.includes('arms') ||
+          message.includes('shoulders') || message.includes('core')) {
+        
+        let filters = { difficulty: userProfile.fitnessLevel.toUpperCase() };
+        
+        // Map user terms to actual database muscle groups
+        if (message.includes('chest') || message.includes('push')) {
+          filters.muscleGroup = 'Triceps'; // Closest to chest in your DB
+        } else if (message.includes('back') || message.includes('pull')) {
+          filters.muscleGroup = 'Upper Back';
+        } else if (message.includes('leg') || message.includes('squat') || message.includes('quad')) {
+          filters.muscleGroup = 'Quads';
+        } else if (message.includes('glute') || message.includes('butt')) {
+          filters.muscleGroup = 'Glutes';
+        } else if (message.includes('arm') || message.includes('bicep')) {
+          filters.muscleGroup = 'Biceps';
+        } else if (message.includes('tricep')) {
+          filters.muscleGroup = 'Triceps';
+        } else if (message.includes('core') || message.includes('abs')) {
+          filters.muscleGroup = 'Abs';
+        } else if (message.includes('shoulder') || message.includes('delt')) {
+          filters.muscleGroup = 'Delts';
+        } else if (message.includes('cardio')) {
+          filters.muscleGroup = 'Cardiovascular System';
+        }
+
+        // Detect exercise categories
+        if (message.includes('cardio')) {
+          filters.category = 'CARDIO';
+        } else if (message.includes('strength')) {
+          filters.category = 'STRENGTH';
+        } else if (message.includes('flexibility') || message.includes('stretch')) {
+          filters.category = 'FLEXIBILITY';
+        }
+
+        const exercises = await fetchExercisesFromAPI(filters);
+        if (exercises.length > 0) {
+          exerciseContext = `\n\nAvailable exercises from our database:\n${formatExercisesForResponse(exercises)}`;
+        }
       }
 
-      // Detect exercise categories
-      if (message.includes('cardio')) {
-        filters.category = 'CARDIO';
-      } else if (message.includes('strength')) {
-        filters.category = 'STRENGTH';
-      } else if (message.includes('flexibility') || message.includes('stretch')) {
-        filters.category = 'FLEXIBILITY';
-      }
-
-      const exercises = await fetchExercisesFromAPI(filters);
-      if (exercises.length > 0) {
-        exerciseContext = `\n\nAvailable exercises from our database:\n${formatExercisesForResponse(exercises)}`;
-      }
-    }
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are TrainerAI, the built-in AI fitness coach for THIS fitness app that the user is currently using.
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are TrainerAI, the built-in AI fitness coach for THIS fitness app that the user is currently using.
 
 IMPORTANT CONTEXT:
 - The user is ALREADY using this fitness app (your app)
@@ -219,32 +224,32 @@ When discussing progress tracking, say things like:
 - "Check your stats in your profile"
 
 Respond as TrainerAI:`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 400,
-        }
-      })
-    });
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 400,
+          }
+        })
+      });
 
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    } else if (data.error) {
-      console.error('Gemini API error:', data.error);
-      return `Sorry, I encountered an issue with the AI service: ${data.error.message}. Let me help you with my built-in knowledge instead!\n\n${await getPredefinedResponse(userMessage)}`;
-    } else {
-      throw new Error('No response from Gemini AI');
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return data.candidates[0].content.parts[0].text;
+      } else if (data.error) {
+        console.error('Gemini API error:', data.error);
+        return `Sorry, I encountered an issue with the AI service: ${data.error.message}. Let me help you with my built-in knowledge instead!\n\n${await getPredefinedResponse(userMessage)}`;
+      } else {
+        throw new Error('No response from Gemini AI');
+      }
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      return await getPredefinedResponse(userMessage) + "\n\n💡 *Note: Using built-in responses. AI features unavailable.*";
     }
-  } catch (error) {
-    console.error('Gemini API error:', error);
-    return await getPredefinedResponse(userMessage) + "\n\n💡 *Note: Using built-in responses. Check your API settings for enhanced AI features.*";
-  }
-};
+  };
 
   // Enhanced AI Response function with Gemini integration
   const getAIResponse = async (userMessage) => {
@@ -255,6 +260,9 @@ Respond as TrainerAI:`
       return await getPredefinedResponse(userMessage);
     }
   };
+
+  // Rest of your existing code remains the same...
+  // (Keep all other functions exactly as they are)
 
   // Database-only responses with CORRECT muscle group mappings
   const getPredefinedResponse = async (userMessage) => {
@@ -503,7 +511,7 @@ Respond as TrainerAI:`
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-white px-4 pt-4 pb-16 font-sans flex flex-col">
-      {/* Simplified Header - Always shows GEMINI AI */}
+      {/* Simplified Header - Shows GEMINI AI only if API key is available */}
       <div className="p-5 flex items-center sticky top-0 z-10 bg-[#1a1a1a]">
         <button 
           className="p-2 hover:bg-zinc-800 rounded-full transition-colors" 
@@ -515,9 +523,11 @@ Respond as TrainerAI:`
         </button>
         <h1 className="text-xl md:text-2xl font-bold kanit-bold mx-auto pr-8 flex items-center">
           AI Fitness Trainer
-          <span className="ml-2 text-xs px-2 py-1 rounded bg-lime-500 text-black">
-            GEMINI AI
-          </span>
+          {apiKey && (
+            <span className="ml-2 text-xs px-2 py-1 rounded bg-lime-500 text-black">
+              GEMINI AI
+            </span>
+          )}
         </h1>
       </div>
 
@@ -587,17 +597,20 @@ Respond as TrainerAI:`
           </div>
         )}
 
-        {/* AI Status Indicator - Always show */}
+        {/* AI Status Indicator - Shows appropriate status based on API key */}
         <div className="mt-6 mb-4">
-          <div className="bg-green-900/20 border border-green-500/30 rounded p-3">
-            <div className="flex items-center text-green-400 text-sm mb-1">
+          <div className={`${apiKey ? 'bg-green-900/20 border-green-500/30' : 'bg-yellow-900/20 border-yellow-500/30'} border rounded p-3`}>
+            <div className={`flex items-center ${apiKey ? 'text-green-400' : 'text-yellow-400'} text-sm mb-1`}>
               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
               </svg>
-              <strong>AI-Powered Fitness Coach</strong>
+              <strong>{apiKey ? 'AI-Powered Fitness Coach' : 'Basic Fitness Coach'}</strong>
             </div>
-            <p className="text-xs text-green-300">
-              Powered by Google Gemini AI with access to your exercise database: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts!
+            <p className={`text-xs ${apiKey ? 'text-green-300' : 'text-yellow-300'}`}>
+              {apiKey 
+                ? 'Powered by Google Gemini AI with access to your exercise database: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts!'
+                : 'Using built-in responses with access to your exercise database. Add Gemini AI key for enhanced features!'
+              }
             </p>
           </div>
         </div>
@@ -663,7 +676,7 @@ Respond as TrainerAI:`
         )}
       </div>
 
-      {/* Chat input - simplified placeholder */}
+      {/* Chat input - placeholder changes based on AI availability */}
       <div className="fixed bottom-14 left-0 right-0 bg-[#1a1a1a] px-4 py-2 border-t border-zinc-700">
         <div className="max-w-3xl mx-auto w-full flex items-center">
           <input
@@ -672,7 +685,7 @@ Respond as TrainerAI:`
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me about workouts, nutrition, or motivation... (Gemini AI)"
+            placeholder={`Ask me about workouts, nutrition, or motivation...${apiKey ? ' (Gemini AI)' : ''}`}
             className="flex-1 bg-zinc-800 text-white placeholder-gray-400 px-4 py-3 rounded-full outline-none focus:ring-2 focus:ring-lime-500 text-sm md:text-base"
             disabled={isTyping}
           />
