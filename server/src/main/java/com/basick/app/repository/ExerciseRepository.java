@@ -163,30 +163,4 @@ public class ExerciseRepository {
             throw new RuntimeException("Error finding exercises by creator: " + createdBy, e);
         }
     }
-
-    /**
-     * Count exercises by muscle group
-     */
-    public long countByMuscleGroup(String muscleGroup) {
-        try {
-            List<Exercise> exercises = firestoreService.findByField(COLLECTION_NAME, "muscleGroup", muscleGroup, Exercise.class);
-            return exercises.size();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error counting exercises by muscle group: " + muscleGroup, e);
-        }
-    }
-
-    /**
-     * Count exercises by category
-     */
-    public long countByCategory(String category) {
-        try {
-            List<Exercise> allExercises = firestoreService.findAll(COLLECTION_NAME, Exercise.class);
-            return allExercises.stream()
-                    .filter(exercise -> exercise.getCategories() != null && exercise.getCategories().contains(category))
-                    .count();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error counting exercises by category: " + category, e);
-        }
-    }
 }
