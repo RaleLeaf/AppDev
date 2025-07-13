@@ -5,7 +5,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.basick.app.dto.exercise.*;
+import com.basick.app.dto.exercise.CreateExerciseRequest;
+import com.basick.app.dto.exercise.ExerciseDTO;
+import com.basick.app.dto.exercise.UpdateExerciseRequest;
 import com.basick.app.mapper.ExerciseMapper;
 import com.basick.app.model.Exercise;
 import com.basick.app.repository.ExerciseRepository;

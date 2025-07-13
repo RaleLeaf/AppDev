@@ -1,56 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 import SideNav from './SideNav';
 
 const WorkoutCategories = () => {
   const navigate = useNavigate();
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Workout card data
-  const workouts = [
-    {
-      title: "Wake Up Call",
-      count: "04",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: false
-    },
-    {
-      title: "Full Body Goal Crusher",
-      count: "07",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: true
-    },
-    {
-      title: "Lower Body Strength",
-      count: "05",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: true
-    },
-    {
-      title: "Upper Body Focus",
-      count: "06",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: false
-    },
-    {
-      title: "Core Crusher",
-      count: "03",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: true
-    },
-    {
-      title: "Cardio Blast",
-      count: "04",
-      frequency: "2x - 3x a Week",
-      image: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-      isPro: false
+  // Fetch exercise counts for each category from your API
+  useEffect(() => {
+    fetchWorkoutCategoriesWithCounts();
+  }, []);
+
+  const fetchWorkoutCategoriesWithCounts = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+
+      const categories = [
+        { title: "Wake Up Call", category: "CARDIO", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false },
+        { title: "Full Body Goal Crusher", category: "STRENGTH", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
+        { title: "Lower Body Strength", category: "Quads", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
+        { title: "Upper Body Focus", category: "Upper Back", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false },
+        { title: "Core Crusher", category: "Abs", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
+        { title: "Cardio Blast", category: "CARDIO", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false }
+      ];
+
+      // Single optimized API call for counts only
+      const response = await fetch('http://localhost:8080/api/exercises/counts', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const counts = await response.json();
+        // Example response: {"CARDIO": 250, "STRENGTH": 400, "Quads": 85, "Upper Back": 95, "Abs": 75}
+
+        const workoutsWithCounts = categories.map(workout => ({
+          ...workout,
+          count: (counts[workout.category] || 0).toString().padStart(2, '0')
+        }));
+
+        setWorkouts(workoutsWithCounts);
+      } else {
+        console.error('Failed to fetch exercise counts');
+        // Fallback to show categories with 0 counts
+        const workoutsWithZeroCounts = categories.map(workout => ({
+          ...workout,
+          count: "00"
+        }));
+        setWorkouts(workoutsWithZeroCounts);
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching workout categories:', error);
+      // Fallback to show categories with 0 counts
+      const categories = [
+        { title: "Wake Up Call", category: "CARDIO", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00" },
+        { title: "Full Body Goal Crusher", category: "STRENGTH", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00" },
+        { title: "Lower Body Strength", category: "Quads", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00" },
+        { title: "Upper Body Focus", category: "Upper Back", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00" },
+        { title: "Core Crusher", category: "Abs", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00" },
+        { title: "Cardio Blast", category: "CARDIO", frequency: "2x - 3x a Week", image: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00" }
+      ];
+      setWorkouts(categories);
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleWorkoutClick = (workout) => {
+    navigate('/exercises', {
+      state: {
+        category: workout.category,
+        title: workout.title
+      }
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mb-4"></div>
+          <p>Loading workout categories...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -86,7 +125,7 @@ const WorkoutCategories = () => {
                 <div
                   key={index}
                   className="rounded-xl overflow-hidden relative shadow-lg flex-shrink-0 transition-transform hover:scale-[1.02] cursor-pointer"
-                  onClick={() => navigate('/exercises')}
+                  onClick={() => handleWorkoutClick(workout)}
                 >
                   <img
                     src={workout.image}
@@ -100,7 +139,7 @@ const WorkoutCategories = () => {
                   )}
                   <div className="absolute bottom-0 left-0 p-3 sm:p-4 w-full bg-gradient-to-t from-black/90 to-transparent">
                     <h2 className="text-lg sm:text-xl font-bold kanit-medium">{workout.title}</h2>
-                    <p className="text-lime-500 text-xs sm:text-sm kanit-regular">| {workout.count} Workouts for {workout.frequency}</p>
+                    <p className="text-lime-500 text-xs sm:text-sm kanit-regular">| {workout.count} Exercises for {workout.frequency}</p>
                   </div>
                 </div>
               ))}
@@ -112,7 +151,7 @@ const WorkoutCategories = () => {
                 <div
                   key={index}
                   className="rounded-xl overflow-hidden relative shadow-lg transition-transform hover:scale-[1.02] cursor-pointer"
-                  onClick={() => navigate('/exercises')}
+                  onClick={() => handleWorkoutClick(workout)}
                 >
                   <img
                     src={workout.image}
@@ -126,7 +165,7 @@ const WorkoutCategories = () => {
                   )}
                   <div className="absolute bottom-0 left-0 p-5 w-full bg-gradient-to-t from-black/90 to-transparent">
                     <h2 className="text-2xl font-bold kanit-medium">{workout.title}</h2>
-                    <p className="text-lime-500 text-base kanit-regular">| {workout.count} Workouts for {workout.frequency}</p>
+                    <p className="text-lime-500 text-base kanit-regular">| {workout.count} Exercises for {workout.frequency}</p>
                   </div>
                 </div>
               ))}
