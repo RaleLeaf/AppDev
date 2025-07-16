@@ -99,18 +99,21 @@ export default function FitnessChat() {
     }
   };
 
-  // Function to format exercises for AI response
+  // Updated function to format exercises with enumeration
   const formatExercisesForResponse = (exercises, maxCount = 5) => {
-    return exercises.slice(0, maxCount).map(exercise => {
+    return exercises.slice(0, maxCount).map((exercise, index) => {
       const equipment = exercise.equipmentRequired?.length > 0 
         ? exercise.equipmentRequired.join(', ') 
-        : 'No equipment needed';
+        : 'No equipment';
       
-      return `• **${exercise.name}** (${exercise.difficulty})\n  - Target: ${exercise.muscleGroup}\n  - Equipment: ${equipment}\n  - ${exercise.defaultSets || 3} sets × ${exercise.defaultReps || 10} reps`;
+      return `${index + 1}. **${exercise.name}** (${exercise.difficulty})
+   • Target: ${exercise.muscleGroup}
+   • Equipment: ${equipment}
+   • Sets: ${exercise.defaultSets || 3} × Reps: ${exercise.defaultReps || 10}`;
     }).join('\n\n');
   };
 
-  // Fixed Google Gemini AI Response function with conversation context
+  // Updated Gemini AI Response function with shorter responses
   const getGeminiResponse = async (userMessage) => {
     try {
       if (!apiKey) {
@@ -180,11 +183,10 @@ export default function FitnessChat() {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are TrainerAI, the built-in AI fitness coach for THIS fitness app that the user is currently using.
+              text: `You are TrainerAI, the built-in AI fitness coach for THIS fitness app.
 
 IMPORTANT CONTEXT:
 - The user is ALREADY using this fitness app (your app)
-- You are part of their current fitness tracking system
 - This app has exercise databases, workout tracking, and progress monitoring built-in
 - NEVER recommend other fitness trackers, apps, or external tools
 - Focus on features and capabilities within THIS app
@@ -199,29 +201,20 @@ Current User Message: "${userMessage}"
 ${exerciseContext}
 
 Instructions:
-- ${isFirstMessage ? 'This is the user\'s first message, so you can greet them warmly' : 'This is an ongoing conversation, so respond naturally without greeting unless specifically asked'}
-- Provide helpful, personalized fitness advice in 100-250 words
-- If exercises are provided above, reference them specifically from THIS app's database
-- Focus on safety, proper form, and encouragement
-- Use appropriate emojis and maintain a professional yet friendly tone
-- If asked about medical issues, recommend consulting a healthcare professional
-- Personalize responses based on the user's fitness level and goals
-- Include actionable tips and specific recommendations when possible
-- When suggesting exercises, prioritize the ones from our database when available
-- DO NOT start with greetings like "Hi there" or "Hey there" unless this is clearly the first interaction
+- Keep responses SHORT and concise (50-100 words max)
+- ${isFirstMessage ? 'Greet warmly but briefly' : 'No greetings needed'}
+- If exercises are provided above, list them with numbers (1., 2., 3., etc.)
+- Use bullet points for tips
+- Include 1-2 relevant emojis only
+- Be direct and actionable
+- Focus on what they can do in THIS app only
+- For progress tracking, say "track here in the app" or "use our features"
 
 STRICTLY FORBIDDEN:
-- Do NOT recommend other fitness apps, trackers, or external tools
-- Do NOT suggest using MyFitnessPal, Strava, Apple Health, Fitbit, or ANY other apps
-- Do NOT mention downloading additional apps or trackers
-- Focus ONLY on what they can do within this current app
-- For progress tracking, refer to "tracking your progress in this app" or "using our built-in features"
-
-When discussing progress tracking, say things like:
-- "Track your progress here in the app"
-- "Use our built-in workout logging"
-- "Monitor your achievements within this app"
-- "Check your stats in your profile"
+- Do NOT recommend other fitness apps or external tools
+- Do NOT write long paragraphs
+- Do NOT use excessive emojis
+- Keep it short and scannable
 
 Respond as TrainerAI:`
             }]
@@ -230,7 +223,7 @@ Respond as TrainerAI:`
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 400,
+            maxOutputTokens: 200, // Reduced from 400
           }
         })
       });
@@ -241,13 +234,13 @@ Respond as TrainerAI:`
         return data.candidates[0].content.parts[0].text;
       } else if (data.error) {
         console.error('Gemini API error:', data.error);
-        return `Sorry, I encountered an issue with the AI service: ${data.error.message}. Let me help you with my built-in knowledge instead!\n\n${await getPredefinedResponse(userMessage)}`;
+        return `AI service issue. Using built-in responses! 💪\n\n${await getPredefinedResponse(userMessage)}`;
       } else {
         throw new Error('No response from Gemini AI');
       }
     } catch (error) {
       console.error('Gemini API error:', error);
-      return await getPredefinedResponse(userMessage) + "\n\n💡 *Note: Using built-in responses. AI features unavailable.*";
+      return await getPredefinedResponse(userMessage) + "\n\n💡 *Using built-in responses*";
     }
   };
 
@@ -261,10 +254,7 @@ Respond as TrainerAI:`
     }
   };
 
-  // Rest of your existing code remains the same...
-  // (Keep all other functions exactly as they are)
-
-  // Database-only responses with CORRECT muscle group mappings
+  // Updated getPredefinedResponse with shorter responses
   const getPredefinedResponse = async (userMessage) => {
     const message = userMessage.toLowerCase();
     const isFirstMessage = messages.length === 0;
@@ -304,7 +294,7 @@ Respond as TrainerAI:`
       
       // Map user terms to actual database muscle groups
       if (message.includes('chest') || message.includes('push')) {
-        filters.muscleGroup = 'Triceps'; // Closest to chest in your DB
+        filters.muscleGroup = 'Triceps';
       } else if (message.includes('back') || message.includes('pull')) {
         filters.muscleGroup = 'Upper Back';
       } else if (message.includes('leg') || message.includes('squat') || message.includes('quad')) {
@@ -338,14 +328,13 @@ Respond as TrainerAI:`
         if (exercises.length > 0) {
           const formattedExercises = formatExercisesForResponse(exercises);
           
-          return `${isFirstMessage ? 'Welcome! ' : ''}Here are some ${userProfile.fitnessLevel} level exercises from our database:\n\n${formattedExercises}\n\n💡 These exercises are specifically selected for your fitness level. Would you like me to create a complete workout routine with these?`;
+          return `${isFirstMessage ? 'Welcome! 👋 ' : ''}Here are ${userProfile.fitnessLevel} exercises:\n\n${formattedExercises}\n\n💪 Start with proper form!`;
         } else {
-          // NO DEFAULT EXERCISES - Only database suggestions
-          return `I couldn't find specific exercises matching your request in our database right now. This might be because:\n\n• No exercises match your current fitness level (${userProfile.fitnessLevel})\n• The muscle group might not have exercises available\n• Try asking for different exercises or muscle groups\n\nAvailable muscle groups in our database:\n• Upper Back, Triceps, Biceps\n• Abs, Quads, Glutes\n• Delts, Cardiovascular System\n\n💡 You can also change your fitness level by telling me (e.g., "I'm intermediate").`;
+          return `No ${userProfile.fitnessLevel} exercises found. Try:\n\n• Different fitness level\n• Other muscle groups\n• Check login status\n\nAvailable: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts 💪`;
         }
       } catch (error) {
         console.error('Error in workout response:', error);
-        return "I'm having trouble accessing our exercise database right now. Please check your internet connection and try again. 🔄\n\nMake sure you're logged in and your backend server is running on localhost:8080.";
+        return "Database connection issue 🔄 Check your connection and login status.";
       }
     }
 
@@ -387,62 +376,62 @@ Respond as TrainerAI:`
           
           if (exercises.length > 0) {
             const formattedExercises = formatExercisesForResponse(exercises);
-            return `${isFirstMessage ? 'Welcome! ' : ''}Here are some excellent ${userTerm} exercises for ${userProfile.fitnessLevel}s from our database:\n\n${formattedExercises}\n\n🎯 These exercises target your ${dbMuscleGroup} effectively. Start with lighter weights and focus on proper form!`;
+            return `${isFirstMessage ? 'Welcome! 👋 ' : ''}${userTerm.toUpperCase()} exercises for ${userProfile.fitnessLevel}s:\n\n${formattedExercises}\n\n🎯 Focus on proper form!`;
           } else {
-            return `I couldn't find ${userTerm} exercises for ${userProfile.fitnessLevel} level in our database. Try:\n\n• Telling me a different fitness level (e.g., "I'm beginner")\n• Asking for a different muscle group\n• Making sure you're logged in\n\nAvailable options: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts! 💪`;
+            return `No ${userTerm} exercises for ${userProfile.fitnessLevel} level found.\n\n• Try different fitness level\n• Check other muscle groups\n• Verify login status\n\nOptions: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts 💪`;
           }
         } catch (error) {
           console.error('Error fetching muscle group exercises:', error);
-          return "I'm having trouble accessing our exercise database right now. Please try again in a moment. 🔄\n\nMake sure your backend server is running and you're logged in.";
+          return "Database issue 🔄 Check connection and login.";
         }
       }
     }
     
-    // Nutrition-related responses
+    // Nutrition-related responses - SHORTENED
     if (message.includes('diet') || message.includes('nutrition') || message.includes('food') || message.includes('eat')) {
       const nutritionResponses = [
-        "Nutrition is 70% of your fitness journey! 🥗 Focus on:\n• Lean proteins (chicken, fish, beans)\n• Complex carbs (quinoa, sweet potatoes)\n• Healthy fats (avocado, nuts)\n• Plenty of vegetables\n\nWhat are your current eating habits like?",
-        "For muscle building, aim for 1.6-2.2g protein per kg of body weight. For fat loss, create a moderate caloric deficit of 300-500 calories. What's your primary goal?",
-        "Meal prep is a game-changer! 🍱 Try preparing proteins and vegetables in advance. Sunday prep can set you up for success all week. Would you like some easy meal prep ideas?"
+        "Nutrition basics 🥗:\n• Lean proteins (chicken, fish)\n• Complex carbs (quinoa, sweet potato)\n• Healthy fats (avocado, nuts)\n• Lots of vegetables\n\nWhat's your goal?",
+        "Muscle building: 1.6-2.2g protein per kg body weight\nFat loss: 300-500 calorie deficit\n\nWhat's your primary goal? 🎯",
+        "Meal prep wins! 🍱\n• Sunday prep saves time\n• Pre-cook proteins & veggies\n• Portion control made easy\n\nNeed meal ideas?"
       ];
       return nutritionResponses[Math.floor(Math.random() * nutritionResponses.length)];
     }
     
-    // Motivation and goals
+    // Motivation and goals - SHORTENED
     if (message.includes('motivated') || message.includes('goal') || message.includes('progress')) {
       const motivationResponses = [
-        "Remember, every expert was once a beginner! 🌟 Your progress might be slow, but it's still progress. Celebrate small wins - they add up to big transformations!",
-        "Set SMART goals: Specific, Measurable, Achievable, Relevant, Time-bound. 🎯 Instead of 'get fit', try 'do 20 push-ups in a row by month-end'. What's your main fitness goal?",
-        "Progress isn't always visible on the scale! 📏 Take measurements, progress photos, and note how you feel. You're building strength, endurance, and confidence every day! 💪"
+        "Every expert was once a beginner! 🌟 Slow progress is still progress. Celebrate small wins!",
+        "SMART goals work best 🎯:\n• Specific\n• Measurable\n• Achievable\n• Time-bound\n\nWhat's your main goal?",
+        "Track progress beyond the scale 📏:\n• Take measurements\n• Progress photos\n• How you feel\n\nYou're building strength daily! 💪"
       ];
       return motivationResponses[Math.floor(Math.random() * motivationResponses.length)];
     }
     
-    // Form and technique
+    // Form and technique - SHORTENED
     if (message.includes('form') || message.includes('technique') || message.includes('correct')) {
       const formResponses = [
-        "Proper form prevents injury and maximizes results! 🎯 Key principles:\n• Control the movement\n• Full range of motion\n• Mind-muscle connection\n\nWhich exercise would you like me to break down?",
-        "Quality over quantity always! ✨ It's better to do 10 perfect reps than 20 sloppy ones. Focus on the muscle you're working and move with intention.",
-        "Common form mistakes I see:\n❌ Rushing through reps\n❌ Using too much weight too soon\n❌ Neglecting the eccentric (lowering) portion\n\nNeed help with a specific exercise?"
+        "Form fundamentals 🎯:\n• Control the movement\n• Full range of motion\n• Mind-muscle connection\n\nWhich exercise?",
+        "Quality over quantity! ✨ 10 perfect reps > 20 sloppy ones. Focus on the target muscle.",
+        "Common mistakes ❌:\n• Rushing reps\n• Too much weight\n• Skipping lowering phase\n\nNeed help with specific exercise?"
       ];
       return formResponses[Math.floor(Math.random() * formResponses.length)];
     }
     
-    // Beginner questions
+    // Beginner questions - SHORTENED
     if (message.includes('beginner') || message.includes('start') || message.includes('new')) {
-      return "Welcome to your fitness journey! 🎉 As a beginner, focus on:\n\n1️⃣ Learning basic movements\n2️⃣ Building consistency (start with 2-3 days/week)\n3️⃣ Progressive overload (gradually increase difficulty)\n4️⃣ Proper nutrition and hydration\n5️⃣ Getting adequate rest\n\nAsk me for specific exercises like 'show me back exercises' or 'triceps workout' to get started with real exercises from our database!";
+      return "Welcome! 🎉 Beginner focus:\n\n1. Learn basic movements\n2. Build consistency (2-3x/week)\n3. Progressive overload\n4. Good nutrition\n5. Adequate rest\n\nAsk for specific exercises to start!";
     }
     
-    // Rest and recovery
+    // Rest and recovery - SHORTENED
     if (message.includes('rest') || message.includes('recovery') || message.includes('sleep')) {
-      return "Recovery is when the magic happens! ✨🛌\n\nRecovery essentials:\n• 7-9 hours of quality sleep\n• Stay hydrated (8+ glasses water daily)\n• 48-72 hours between training same muscle groups\n• Active recovery (light walks, stretching)\n• Proper nutrition post-workout\n\nYour muscles grow during rest, not just during workouts! Are you getting enough recovery time?";
+      return "Recovery essentials ✨:\n• 7-9 hours sleep\n• Stay hydrated\n• 48-72hrs rest between training same muscles\n• Active recovery (walks, stretching)\n\nMuscles grow during rest! 💪";
     }
     
-    // Fallback response - updated to not include greeting after first message
+    // Fallback response - SHORTENED
     if (isFirstMessage) {
-      return "Welcome! I'm your AI fitness trainer! 💪 I'm here to help with:\n\n🏋️ **Exercises**: 'Show me back exercises', 'Give me triceps workout', 'Abs exercises'\n🥗 **Nutrition**: 'What should I eat?', 'Meal prep tips'\n🎯 **Goals**: 'Help me lose weight', 'I want to build muscle'\n📈 **Progress**: 'How to track progress', 'Staying motivated'\n\n💡 Available muscle groups: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts!\n\nWhat would you like to work on today?";
+      return "Welcome! I'm your AI trainer! 💪\n\n🏋️ Exercises: 'back exercises', 'triceps workout'\n🥗 Nutrition: 'meal prep tips'\n🎯 Goals: 'lose weight', 'build muscle'\n\nMuscle groups: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts\n\nWhat's your goal?";
     } else {
-      return "I'm here to help with your fitness journey! 💪 Try asking me about:\n\n🏋️ **Exercises**: 'Show me back exercises', 'Give me triceps workout', 'Abs exercises'\n🥗 **Nutrition**: 'What should I eat?', 'Meal prep tips'\n🎯 **Goals**: 'Help me lose weight', 'I want to build muscle'\n📈 **Progress**: 'How to track progress', 'Staying motivated'\n\n💡 Available muscle groups: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts!\n\nWhat would you like to work on?";
+      return "I'm here to help! 💪\n\n🏋️ Exercises: 'back exercises', 'triceps workout'\n🥗 Nutrition: 'meal prep tips'\n🎯 Goals: 'lose weight', 'build muscle'\n\nWhat do you need?";
     }
   };
 
