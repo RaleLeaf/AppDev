@@ -74,7 +74,7 @@ public class ExerciseService {
             if (existingExercise == null) {
                 return null;
             }
-            
+
             exerciseMapper.updateFromRequest(request, existingExercise);
             Exercise updatedExercise = exerciseRepository.update(existingExercise);
             return exerciseMapper.toDTO(updatedExercise);
@@ -141,7 +141,7 @@ public class ExerciseService {
      */
     public List<ExerciseDTO> getExercisesByCategory(String category) {
         try {
-            List<Exercise> exercises = exerciseRepository.findByCategory(category);
+            List<Exercise> exercises = exerciseRepository.findByCategory(category, 0);
             return exercises.stream()
                     .map(exerciseMapper::toDTO)
                     .collect(Collectors.toList());
@@ -159,7 +159,7 @@ public class ExerciseService {
             if (exercise == null) {
                 return null;
             }
-            
+
             exercise.updateRating(rating);
             Exercise updatedExercise = exerciseRepository.update(exercise);
             return exerciseMapper.toDTO(updatedExercise);
@@ -177,7 +177,7 @@ public class ExerciseService {
             if (exercise == null) {
                 return null;
             }
-            
+
             exercise.incrementUsageCount();
             Exercise updatedExercise = exerciseRepository.update(exercise);
             return exerciseMapper.toDTO(updatedExercise);
@@ -211,6 +211,18 @@ public class ExerciseService {
                     .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Error retrieving exercises for creator: " + creatorId, e);
+        }
+    }
+
+    // Add this method:
+    public List<ExerciseDTO> getExercisesByWorkoutCategory(String workoutCategory, int limit) {
+        try {
+            List<Exercise> exercises = exerciseRepository.findByWorkoutCategory(workoutCategory, limit);
+            return exercises.stream()
+                    .map(exerciseMapper::toDTO)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error retrieving exercises by workout category: " + workoutCategory, e);
         }
     }
 }

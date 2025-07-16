@@ -166,4 +166,17 @@ public class ExerciseController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    // Add this new endpoint:
+    @GetMapping("/workout-category/{category}")
+    public ResponseEntity<List<ExerciseDTO>> getExercisesByWorkoutCategory(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "6") int limit) {
+        try {
+            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategory(category, limit);
+            return ResponseEntity.ok(exercises);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

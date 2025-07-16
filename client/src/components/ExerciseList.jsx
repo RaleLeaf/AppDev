@@ -9,7 +9,7 @@ function ExerciseList() {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Get category from navigation state or default to all
   const category = location.state?.category || 'all';
   const categoryTitle = location.state?.title || 'All Exercises';
@@ -18,22 +18,14 @@ function ExerciseList() {
     fetchExercises();
   }, [category]);
 
+  // Update the fetchExercises method to use the new endpoint:
   const fetchExercises = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
-      
-      // Determine API endpoint based on category
-      let url = 'http://localhost:8080/api/exercises';
-      if (category !== 'all') {
-        // Map category to API endpoints
-        if (['STRENGTH', 'CARDIO', 'FLEXIBILITY'].includes(category)) {
-          url = `http://localhost:8080/api/exercises/category/${category}`;
-        } else {
-          // Assume it's a muscle group
-          url = `http://localhost:8080/api/exercises/muscle-group/${category}`;
-        }
-      }
+
+      // Use the new workout-category endpoint
+      const url = `http://localhost:8080/api/exercises/workout-category/${category}?limit=6`;
 
       const response = await fetch(url, {
         headers: {
