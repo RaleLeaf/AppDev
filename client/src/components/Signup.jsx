@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 function Signup() {
     const navigate = useNavigate();
-    const location = useLocation();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -13,9 +12,6 @@ function Signup() {
     });
     const [validationErrors, setValidationErrors] = useState({});
     const { signUp, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
-
-    // Get the intended destination or default to home
-    const from = location.state?.from?.pathname || '/home';
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -79,7 +75,8 @@ function Signup() {
         
         try {
             await signUp(formData.name, formData.email, formData.password);
-            navigate(from, { replace: true });
+            // Redirect new users to complete their profile
+            navigate('/user-details', { replace: true });
         } catch (error) {
             console.error('Signup failed:', error);
             // Clear password fields on error
@@ -94,8 +91,13 @@ function Signup() {
     const handleGoogleSignIn = async () => {
         clearErrors();
         try {
-            await signInWithGoogle();
-            navigate(from, { replace: true });
+            const user = await signInWithGoogle();
+            // Check if user is new or existing and redirect accordingly
+            if (user.isNewUser) {
+                navigate('/user-details', { replace: true });
+            } else {
+                navigate('/home', { replace: true });
+            }
         } catch (error) {
             console.error('Google sign-in failed:', error);
         }

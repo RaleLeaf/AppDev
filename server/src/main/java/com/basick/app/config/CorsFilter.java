@@ -25,9 +25,17 @@ public class CorsFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) res;
         HttpServletRequest request = (HttpServletRequest) req;
         
-        response.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+        // Allow multiple origins for development
+        String origin = request.getHeader("Origin");
+        if (origin != null && (origin.equals("http://localhost:5173") || 
+                              origin.equals("http://localhost:5174") ||
+                              origin.equals("http://localhost:3000") ||
+                              origin.equals("http://127.0.0.1:5173"))) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+        }
+        
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+        response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control");
         response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setHeader("Access-Control-Max-Age", "3600");
         

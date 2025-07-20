@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import authService from '../services/authService';
 import userService from '../services/userService';
-import firestoreService from '../services/firestoreService';
 
 // Utility function to get formatted last sign-in time
 export const getLastSignInTime = (user) => {
@@ -29,17 +28,48 @@ const useAuthStore = create(
     (set, get) => ({
       // State
       user: null,
+      userId: null, // Add userId to the store
+      userProfileId: null, // Add userProfileId to the store
       isAuthenticated: false,
       isLoading: true,
       error: null,
 
       // Actions
       setUser: (user) => {
+        // Debug what we're receiving
+        console.log('🔍 DEBUG - setUser input:', {
+          user: user,
+          hasBackendUser: !!user?.backendUser,
+          userKeys: user ? Object.keys(user) : [],
+          backendUserKeys: user?.backendUser ? Object.keys(user.backendUser) : []
+        });
+
+        const backendUser = user?.backendUser || {};
+        
+        // Use the userId from backend (Firestore document ID)
+        const userId = backendUser?.userId || user?.uid;  // Use backendUser.userId first, then fallback to Firebase UID
+        const userProfileId = backendUser?.userProfileId;
+        
+        console.log('🔍 DEBUG - Extracted IDs:', {
+          userId: userId,
+          userProfileId: userProfileId,
+          source: backendUser?.userId ? 'backendUser.userId' : 'user.uid'
+        });
+
         set({ 
           user, 
+          userId: userId, // Use the Firestore document ID
+          userProfileId: userProfileId, // Set internal userProfileId
           isAuthenticated: !!user, 
           isLoading: false, 
           error: null 
+        });
+
+        // Log the final state after setting
+        console.log('✅ Auth store updated with IDs:', {
+          userId: get().userId,
+          userProfileId: get().userProfileId,
+          isAuthenticated: get().isAuthenticated
         });
       },
 
@@ -80,49 +110,25 @@ const useAuthStore = create(
               // Note: Firebase Auth automatically tracks lastSignInTime
               // Access via: firebaseUser.metadata.lastSignInTime
               
+              const combinedUser = { 
+                ...firebaseUser, 
+                backendUser,
+                lastSignInTime: firebaseUser.metadata.lastSignInTime // Use Firebase Auth's built-in tracking
+              };
+              
+              // Use setUser to properly set userId and userProfileId
+              get().setUser(combinedUser);
+            } catch (backendError) {
+              console.warn('Failed to fetch user from backend during session restoration:', backendError.message);
+              
+              // Firebase user exists but no backend user, still consider authenticated
+              // This might be a new user who hasn't completed the full registration process
               set({ 
-                user: { 
-                  ...firebaseUser, 
-                  ...backendUser,
-                  lastSignInTime: firebaseUser.metadata.lastSignInTime // Use Firebase Auth's built-in tracking
-                }, 
+                user: firebaseUser, 
                 isAuthenticated: true, 
                 isLoading: false,
                 error: null 
               });
-            } catch (backendError) {
-              console.warn('Failed to fetch user from backend during session restoration:', backendError.message);
-              
-              // Try to fetch from Firestore as fallback
-              try {
-                const firestoreUser = await firestoreService.getUserDocument(firebaseUser.uid);
-                console.log('Firestore user found during session restoration');
-                
-                // Note: Firebase Auth automatically tracks lastSignInTime
-                // No need to update Firestore lastLoginAt - use Firebase Auth's built-in tracking
-                
-                set({ 
-                  user: { 
-                    ...firebaseUser, 
-                    ...firestoreUser,
-                    lastSignInTime: firebaseUser.metadata.lastSignInTime
-                  }, 
-                  isAuthenticated: true, 
-                  isLoading: false,
-                  error: null 
-                });
-              } catch (firestoreError) {
-                console.warn('Failed to fetch user from Firestore during session restoration:', firestoreError.message);
-                
-                // Firebase user exists but no backend/firestore user, still consider authenticated
-                // This might be a new user who hasn't completed the full registration process
-                set({ 
-                  user: firebaseUser, 
-                  isAuthenticated: true, 
-                  isLoading: false,
-                  error: null 
-                });
-              }
             }
           } else {
             console.log('No Firebase user found during initialization');
@@ -168,48 +174,25 @@ const useAuthStore = create(
             // Note: Firebase Auth automatically tracks lastSignInTime
             const combinedUser = { 
               ...firebaseUser, 
-              ...backendUser,
-              lastSignInTime: firebaseUser.metadata.lastSignInTime
+              backendUser,
+              lastSignInTime: firebaseUser.metadata.lastSignInTime,
+              isNewUser: false // Mark as existing user
             };
+            
+            // Use setUser to properly set userId and userProfileId
+            get().setUser(combinedUser);
+            return get().user;
+          } catch (backendError) {
+            console.error('Failed to fetch user from backend during sign-in:', backendError);
+            
+            // Still consider authenticated if Firebase auth succeeded
             set({ 
-              user: combinedUser, 
+              user: firebaseUser, 
               isAuthenticated: true, 
               isLoading: false,
               error: null 
             });
-            return combinedUser;
-          } catch (backendError) {
-            console.error('Failed to fetch user from backend during sign-in:', backendError);
-            
-            // Try to fetch from Firestore as fallback
-            try {
-              const firestoreUser = await firestoreService.getUserDocument(firebaseUser.uid);
-              
-              // Note: Firebase Auth automatically tracks lastSignInTime
-              const combinedUser = { 
-                ...firebaseUser, 
-                ...firestoreUser,
-                lastSignInTime: firebaseUser.metadata.lastSignInTime
-              };
-              set({ 
-                user: combinedUser, 
-                isAuthenticated: true, 
-                isLoading: false,
-                error: null 
-              });
-              return combinedUser;
-            } catch (firestoreError) {
-              console.error('Failed to fetch user from Firestore during sign-in:', firestoreError);
-              
-              // Still consider authenticated if Firebase auth succeeded
-              set({ 
-                user: firebaseUser, 
-                isAuthenticated: true, 
-                isLoading: false,
-                error: null 
-              });
-              return firebaseUser;
-            }
+            return firebaseUser;
           }
         } catch (error) {
           console.error('Sign-in failed:', error);
@@ -282,21 +265,19 @@ const useAuthStore = create(
           // Step 5: Combine user data and update state
           const combinedUser = {
             ...firebaseUser,
-            ...(backendUser || {}),
+            backendUser,
             displayName: name.trim(),
             name: name.trim(),
-            lastSignInTime: firebaseUser.metadata.lastSignInTime // Use Firebase Auth's built-in tracking
+            lastSignInTime: firebaseUser.metadata.lastSignInTime, // Use Firebase Auth's built-in tracking
+            isNewUser: true // Mark as new user
           };
           
-          set({ 
-            user: combinedUser,
-            isAuthenticated: true, 
-            isLoading: false,
-            error: null 
-          });
+          // Use setUser to properly set userId and userProfileId
+          get().setUser(combinedUser);
           
           console.log('User signup completed successfully');
-          return combinedUser;
+          console.log('Stored IDs on signup:', { userId: get().userId, userProfileId: get().userProfileId });
+          return get().user;
         } catch (error) {
           console.error('Sign-up failed:', error);
           
@@ -334,7 +315,8 @@ const useAuthStore = create(
             const combinedUser = { 
               ...firebaseUser, 
               ...backendUser,
-              lastSignInTime: firebaseUser.metadata.lastSignInTime
+              lastSignInTime: firebaseUser.metadata.lastSignInTime,
+              isNewUser: false // Mark as existing user
             };
             set({ 
               user: combinedUser, 
@@ -393,7 +375,8 @@ const useAuthStore = create(
               const combinedUser = { 
                 ...firebaseUser, 
                 ...backendUser,
-                lastSignInTime: firebaseUser.metadata.lastSignInTime
+                lastSignInTime: firebaseUser.metadata.lastSignInTime,
+                isNewUser: true // Mark as new user
               };
               set({ 
                 user: combinedUser, 
@@ -471,23 +454,9 @@ const useAuthStore = create(
         try {
           set({ isLoading: true });
           
-          // Update in Firestore first
-          try {
-            await firestoreService.updateUserDocument(currentUser.uid, userData);
-            console.log('User updated in Firestore');
-          } catch (firestoreError) {
-            console.warn('Failed to update user in Firestore:', firestoreError.message);
-          }
-          
-          // Update in backend if user has backend data
-          if (currentUser.id) {
-            try {
-              await userService.updateUser(currentUser.id, userData);
-              console.log('User updated in backend');
-            } catch (backendError) {
-              console.warn('Failed to update user in backend:', backendError.message);
-            }
-          }
+          // Update in backend using Firebase UID
+          await userService.updateUser(currentUser.uid, userData);
+          console.log('User updated in backend');
           
           // Update local state
           const updatedUser = { ...currentUser, ...userData };
@@ -540,21 +509,9 @@ const useAuthStore = create(
           } catch (backendError) {
             console.warn('Failed to refresh from backend:', backendError.message);
             
-            // Fallback to Firestore
-            try {
-              const firestoreUser = await firestoreService.getUserDocument(currentUser.uid);
-              const updatedUser = { ...currentUser, ...firestoreUser };
-              set({ 
-                user: updatedUser,
-                isLoading: false,
-                error: null
-              });
-              return updatedUser;
-            } catch (firestoreError) {
-              console.warn('Failed to refresh from Firestore:', firestoreError.message);
-              set({ isLoading: false });
-              return currentUser;
-            }
+            // If backend fails, just keep current user data
+            set({ isLoading: false });
+            return currentUser;
           }
         } catch (error) {
           console.error('Failed to refresh user data:', error);
@@ -570,6 +527,8 @@ const useAuthStore = create(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
+        userId: state.userId,
+        userProfileId: state.userProfileId,
         isAuthenticated: state.isAuthenticated,
       }),
     }

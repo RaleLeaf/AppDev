@@ -62,6 +62,7 @@ public class UserProfileMapper {
         
         // Copy UserProfile-specific fields
         userProfileDTO.setUserId(userProfile.getUserId());
+        userProfileDTO.setUserProfileId(userProfile.getUserProfileId());
         userProfileDTO.setUsername(userProfile.getUsername());
         userProfileDTO.setDisplayName(userProfile.getDisplayName());
         userProfileDTO.setFirstName(userProfile.getFirstName());
@@ -69,6 +70,7 @@ public class UserProfileMapper {
         userProfileDTO.setProfilePictureUrl(userProfile.getProfilePictureUrl());
         userProfileDTO.setBio(userProfile.getBio());
         userProfileDTO.setGender(userProfile.getGender());
+        userProfileDTO.setDateOfBirth(userProfile.getDateOfBirth());
         userProfileDTO.setAge(userProfile.getAge());
         userProfileDTO.setHeight(userProfile.getHeight());
         userProfileDTO.setWeight(userProfile.getWeight());
@@ -129,6 +131,7 @@ public class UserProfileMapper {
         userProfile.setProfilePictureUrl(request.getProfilePictureUrl());
         userProfile.setBio(request.getBio());
         userProfile.setGender(request.getGender());
+        userProfile.setDateOfBirth(request.getDateOfBirth());
         userProfile.setAge(request.getAge());
         userProfile.setHeight(request.getHeight());
         userProfile.setWeight(request.getWeight());
@@ -172,6 +175,9 @@ public class UserProfileMapper {
         }
         if (request.getGender() != null) {
             userProfile.setGender(request.getGender());
+        }
+        if (request.getDateOfBirth() != null) {
+            userProfile.setDateOfBirth(request.getDateOfBirth());
         }
         if (request.getAge() != null) {
             userProfile.setAge(request.getAge());
@@ -230,6 +236,7 @@ public class UserProfileMapper {
             // Return minimal information for private profiles
             UserProfileDTO userProfileDTO = new UserProfileDTO();
             userProfileDTO.setUserId(userProfile.getUserId());
+            userProfileDTO.setUserProfileId(userProfile.getUserProfileId());
             userProfileDTO.setUsername(userProfile.getUsername());
             userProfileDTO.setDisplayName(userProfile.getDisplayName());
             userProfileDTO.setProfilePictureUrl(userProfile.getProfilePictureUrl());
