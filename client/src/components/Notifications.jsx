@@ -1,74 +1,128 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from './BottonNav';
 import SideNav from './SideNav';
+import BottomNav from './BottonNav';
 
-const Notifications = () => {
+export default function Notifications() {
   const navigate = useNavigate();
+  const [userId, setUserId] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('new');
 
-  const notifications = [
-    {
-      id: 1,
-      type: 'new',
-      title: 'Congratulations',
-      message: '35% your daily challenge completed',
-      time: '9:45 AM',
-      isNew: true
-    },
-    {
-      id: 2,
-      type: 'event',
-      title: 'Attention',
-      message: 'Your subscription is going to expire very soon. Subscribe now.',
-      time: '9:38 AM',
-      isNew: true
-    },
-    {
-      id: 3,
-      type: 'all',
-      title: 'Daily Activity',
-      message: 'Time for your workout session',
-      time: '8:25 AM',
-      isNew: false
-    }
-  ];
+  // Load userId from JWT - memoized to prevent unnecessary re-renders
+  useEffect(() => {
+    const loadUser = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      
+      try {
+        const [, payloadB64] = token.split('.');
+        const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+        const uid = payload.user_id || payload.sub;
+        if (!uid) return;
 
+        const res = await fetch(`/api/users/firebase/${uid}`, {
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          },
+        });
+        
+        if (res.ok) {
+          const me = await res.json();
+          setUserId(me.firebaseUid);
+        }
+      } catch (err) {
+        console.error('Failed to load user:', err);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // Fetch notifications - memoized with useCallback
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const startTime = performance.now();
+      
+      const res = await fetch(`/api/notifications/user/${userId}`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const endTime = performance.now();
+      console.log(`Notification fetch took ${endTime - startTime}ms`);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to fetch notifications');
+      }
+      
+      const data = await res.json();
+      setNotifications(data);
+    } catch (err) {
+      console.error('Notification fetch error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  // Fetch notifications when userId changes
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Filter notifications
   const filteredNotifications = notifications.filter(notification => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'new' && notification.isNew) return true;
+    if (activeTab === 'new' && !notification.isRead) return true;
     if (activeTab === 'events' && notification.type === 'event') return true;
     return false;
   });
 
+  // Format time function
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (!userId) return <div className="text-white text-center mt-10">Loading user...</div>;
+
   return (
     <div className="min-h-screen bg-black text-white flex">
-      {/* SideNav - Only visible on medium screens and up */}
       <SideNav />
-      
-      {/* Main Content */}
       <div className="flex-1 flex flex-col pb-20 md:pb-0">
-        {/* Content Container - Centered properly for all screen sizes */}
         <div className="w-full max-w-7xl mx-auto md:px-6 lg:ml-32 xl:mx-auto">
-          {/* Notifications Content */}
           <div className="p-5 mb-2">
             <h1 className="text-3xl font-bold kanit-bold text-center md:text-left mb-6">NOTIFICATIONS</h1>
 
             <div className="bg-zinc-900 rounded-full p-1 flex">
-              <button 
-                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'new' ? 'bg-lime-500 text-black' : 'text-white'}`} 
+              <button
+                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'new' ? 'bg-lime-500 text-black' : 'text-white'}`}
                 onClick={() => setActiveTab('new')}
               >
                 New
               </button>
-              <button 
-                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'events' ? 'bg-lime-500 text-black' : 'text-white'}`} 
+              <button
+                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'events' ? 'bg-lime-500 text-black' : 'text-white'}`}
                 onClick={() => setActiveTab('events')}
               >
                 Events
               </button>
-              <button 
-                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'all' ? 'bg-lime-500 text-black' : 'text-white'}`} 
+              <button
+                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'all' ? 'bg-lime-500 text-black' : 'text-white'}`}
                 onClick={() => setActiveTab('all')}
               >
                 All
@@ -77,7 +131,9 @@ const Notifications = () => {
           </div>
 
           <div className="flex-1 px-5 overflow-y-auto">
-            {filteredNotifications.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">Loading notifications...</div>
+            ) : filteredNotifications.length > 0 ? (
               filteredNotifications.map(notification => (
                 <div key={notification.id} className="mb-4 pb-4 border-b border-zinc-800">
                   <div className="flex justify-between items-start">
@@ -85,15 +141,13 @@ const Notifications = () => {
                       {notification.isNew && <div className="h-2 w-2 bg-lime-500 rounded-full mr-2"></div>}
                       <h3 className="font-medium kanit-medium">{notification.title}</h3>
                     </div>
-                    <span className="text-xs text-gray-500">{notification.time}</span>
+                    <span className="text-xs text-gray-500">{notification.time || ''}</span>
                   </div>
                   <p className="text-sm text-gray-300 mt-1">{notification.message}</p>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No notifications found</p>
-              </div>
+              <div className="text-center py-8 text-gray-500">No notifications found</div>
             )}
           </div>
 
@@ -106,13 +160,10 @@ const Notifications = () => {
           </div>
         </div>
       </div>
-      
-      {/* Bottom Navigation - Only visible on mobile and small tablets */}
+
       <div className="md:hidden fixed bottom-0 left-0 right-0">
         <BottomNav />
       </div>
     </div>
   );
-};
-
-export default Notifications;
+}
