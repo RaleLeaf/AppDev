@@ -204,7 +204,7 @@ public class LeaderboardRepository {
         Query query = collection
             .whereEqualTo("category", category)
             .whereEqualTo("timeframe", timeframe)
-            .orderBy("rank");
+            .orderBy("rank", Query.Direction.ASCENDING);
         
         ApiFuture<QuerySnapshot> future = query.get();
         QuerySnapshot documents = future.get();

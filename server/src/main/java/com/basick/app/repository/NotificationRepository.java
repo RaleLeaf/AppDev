@@ -52,27 +52,35 @@ public class NotificationRepository {
      * Find all notifications
      */
     public List<Notification> findAll() throws ExecutionException, InterruptedException {
-        return firestoreService.findAll(COLLECTION_NAME, Notification.class);
-    }
+            return firestoreService.findAll(COLLECTION_NAME, Notification.class);
+        }
 
-    /**
-     * Find notifications by user ID
-     */
-    public List<Notification> findByUserId(String userId) throws ExecutionException, InterruptedException {
+        /**
+         * Find notifications by user ID
+         */
+        public List<Notification> findByUserId(String userId) throws ExecutionException, InterruptedException {
+        System.out.println("🔍 Querying Firestore for userId = " + userId);
+
         ApiFuture<QuerySnapshot> query = FirestoreClient.getFirestore()
-                .collection(COLLECTION_NAME)
-                .whereEqualTo("userId", userId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get();
+            .collection(COLLECTION_NAME)
+            .whereEqualTo("userId", userId)
+            // .orderBy("createdAt", Query.Direction.DESCENDING)
+            .get();
 
         List<Notification> results = new java.util.ArrayList<>();
-        for (com.google.cloud.firestore.QueryDocumentSnapshot doc : query.get().getDocuments()) {
+        QuerySnapshot snapshot = query.get(); // 🔴 This is where it may hang
+
+        System.out.println("✅ Firestore query complete, found: " + snapshot.size() + " documents");
+
+        for (com.google.cloud.firestore.QueryDocumentSnapshot doc : snapshot.getDocuments()) {
             Notification notification = doc.toObject(Notification.class);
             notification.setId(doc.getId());
             results.add(notification);
         }
+
         return results;
     }
+
 
     /**
      * Find notifications by user ID and read status

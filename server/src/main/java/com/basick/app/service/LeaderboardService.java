@@ -1,9 +1,9 @@
 package com.basick.app.service;
 
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-
-import org.springframework.stereotype.Service;
 
 import com.basick.app.dto.leaderboard.LeaderboardDTO;
 import com.basick.app.dto.leaderboard.CreateLeaderboardRequest;
@@ -115,12 +115,9 @@ public class LeaderboardService {
     /**
      * Get leaderboards by category and timeframe, ordered by rank
      */
-    public List<LeaderboardDTO> getLeaderboardsByCategoryAndTimeframeOrderByRank(String category, String timeframe) 
-            throws ExecutionException, InterruptedException {
+    public List<LeaderboardDTO> getLeaderboardsByCategoryAndTimeframeOrderByRank(String category, String timeframe) throws ExecutionException, InterruptedException {
         List<Leaderboard> leaderboards = leaderboardRepository.findByCategoryAndTimeframeOrderByRank(category, timeframe);
-        return leaderboards.stream()
-            .map(leaderboardMapper::toDTO)
-            .toList();
+        return leaderboardMapper.toDTOList(leaderboards);
     }
 
     /**

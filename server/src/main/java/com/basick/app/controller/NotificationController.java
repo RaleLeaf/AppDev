@@ -98,13 +98,17 @@ public class NotificationController {
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<NotificationDTO>> getNotificationsByUserId(@PathVariable String userId) {
+        System.out.println("🔍 Called /user/{userId} with: " + userId);
         try {
             List<NotificationDTO> notifications = notificationService.getNotificationsByUserId(userId);
+            System.out.println("✅ Found " + notifications.size() + " notifications for user " + userId);
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
+            e.printStackTrace(); // log full stack trace to console
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 
     /**
      * Get unread notifications by user ID
