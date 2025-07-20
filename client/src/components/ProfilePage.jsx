@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 import SideNav from './SideNav';
@@ -6,12 +6,194 @@ import useAuthStore from '../store/authStore';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuthStore();
+  const { user, isAuthenticated, signOut } = useAuthStore();
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  // User data state with Facebook-style placeholder avatar
+  const [userData, setUserData] = useState({
+    displayName: 'User',
+    email: '',
+    profilePictureUrl: "",
+    joinedDate: '',
+    bio: ''
+  });
+
+  // Generate Facebook-style placeholder image with person silhouette
+  const getPlaceholderImage = () => {
+    // Using a data URL for an SVG person silhouette similar to Facebook's default
+    return "data:image/svg+xml;base64," + btoa(`
+      <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" fill="#3a3a3a"/>
+        <g fill="#6b7280">
+          <!-- Person silhouette -->
+          <circle cx="100" cy="75" r="25"/>
+          <path d="M100 110 C85 110, 70 120, 70 140 L70 160 L130 160 L130 140 C130 120, 115 110, 100 110 Z"/>
+        </g>
+      </svg>
+    `);
+  };
+
+  // Load user data on component mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. Try to get from auth store first
+        if (user) {
+          setUserData(prev => ({
+            ...prev,
+            displayName: user.displayName || user.name || user.email?.split('@')[0] || 'User',
+            email: user.email || '',
+            profilePictureUrl: user.profilePictureUrl || ""
+          }));
+        }
+
+        // 2. Try to get from localStorage
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          try {
+            const parsedData = JSON.parse(storedUserData);
+            setUserData(prev => ({
+              ...prev,
+              displayName: parsedData.displayName || parsedData.name || prev.displayName,
+              email: parsedData.email || prev.email,
+              profilePictureUrl: parsedData.profilePictureUrl || "",
+              bio: parsedData.bio || prev.bio,
+              joinedDate: parsedData.createdAt ? formatJoinDate(parsedData.createdAt) : prev.joinedDate
+            }));
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+          }
+        }
+
+        // 3. Try to fetch from API if authenticated
+        if (isAuthenticated) {
+          await fetchUserDataFromAPI();
+        }
+        
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [user, isAuthenticated]);
+
+  // Format join date
+  const formatJoinDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 30) {
+        return `Joined ${diffDays} days ago`;
+      } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return `Joined ${months} month${months > 1 ? 's' : ''} ago`;
+      } else {
+        const years = Math.floor(diffDays / 365);
+        return `Joined ${years} year${years > 1 ? 's' : ''} ago`;
+      }
+    } catch (error) {
+      return 'Member since recently';
+    }
+  };
+
+  // Fetch user data from API
+  const fetchUserDataFromAPI = async () => {
+    try {
+      const firebaseUid = localStorage.getItem('firebaseUid') || user?.uid || user?.firebaseUid;
+      const authToken = localStorage.getItem('authToken') || user?.accessToken;
+      
+      if (!firebaseUid || !authToken) {
+        console.log('No auth data available for API call');
+        return;
+      }
+
+      // Fetch user data from your server
+      const userResponse = await fetch(`http://localhost:8080/api/users/firebase/${firebaseUid}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (userResponse.ok) {
+        const apiUserData = await userResponse.json();
+        console.log('User data from API:', apiUserData);
+        
+        // Update user data with API response
+        setUserData(prev => ({
+          ...prev,
+          displayName: apiUserData.name || apiUserData.displayName || prev.displayName,
+          email: apiUserData.email || prev.email,
+          joinedDate: apiUserData.createdAt ? formatJoinDate(apiUserData.createdAt) : prev.joinedDate
+        }));
+
+        // Try to fetch user profile data for additional info
+        try {
+          const profileResponse = await fetch(`http://localhost:8080/api/userprofiles/user/${apiUserData.id}`, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            console.log('Profile data from API:', profileData);
+            
+            setUserData(prev => ({
+              ...prev,
+              displayName: profileData.displayName || prev.displayName,
+              bio: profileData.bio || prev.bio,
+              profilePictureUrl: profileData.profilePictureUrl || ""
+            }));
+          }
+        } catch (profileError) {
+          console.log('Profile data not found or error:', profileError);
+        }
+
+        // Store updated data in localStorage
+        localStorage.setItem('userData', JSON.stringify({
+          ...apiUserData,
+          ...userData
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching user data from API:', error);
+    }
+  };
+
+  // Split display name for styling
+  const getDisplayNames = () => {
+    const fullName = userData.displayName || 'User';
+    const nameParts = fullName.split(' ');
+    
+    if (nameParts.length === 1) {
+      return { firstName: nameParts[0].toUpperCase(), lastName: '' };
+    } else {
+      return { 
+        firstName: nameParts[0].toUpperCase(), 
+        lastName: nameParts.slice(1).join(' ').toUpperCase() 
+      };
+    }
+  };
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Clear local storage
+      localStorage.removeItem('userData');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('firebaseUid');
+      localStorage.removeItem('authToken');
       navigate('/login');
     } catch (error) {
       console.error('Sign out failed:', error);
@@ -19,6 +201,20 @@ const ProfilePage = () => {
       navigate('/login');
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { firstName, lastName } = getDisplayNames();
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -49,15 +245,46 @@ const ProfilePage = () => {
                   <path d="M50,95 A45,45 0 0,1 5,50 A45,45 0 0,1 50,5" fill="none" stroke="#c2e200" strokeWidth="8" strokeLinecap="round" />
                 </svg>
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full overflow-hidden border-2 border-black">
-                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200" alt="Sarah Wegan" className="w-full h-full object-cover" />
+                  {userData.profilePictureUrl ? (
+                    <img 
+                      src={userData.profilePictureUrl} 
+                      alt={userData.displayName} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  {/* Facebook-style placeholder */}
+                  <div 
+                    className={`w-full h-full bg-gray-600 flex items-center justify-center ${userData.profilePictureUrl ? 'hidden' : 'block'}`}
+                    style={{ display: userData.profilePictureUrl ? 'none' : 'flex' }}
+                  >
+                    <svg className="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
 
               <div className="text-center">
-                <h1 className="text-3xl font-bold kanit-bold">SARAH</h1>
-                <h2 className="text-2xl font-light kanit-light">WEGAN</h2>
+                <h1 className="text-3xl font-bold kanit-bold">{firstName}</h1>
+                {lastName && <h2 className="text-2xl font-light kanit-light">{lastName}</h2>}
               </div>
-              <p className="text-zinc-500 text-xs mt-1">Joined 2 months ago</p>
+              <p className="text-zinc-500 text-xs mt-1">
+                {userData.joinedDate || 'Member since recently'}
+              </p>
+              {userData.bio && (
+                <p className="text-gray-400 text-sm mt-2 text-center max-w-sm">
+                  {userData.bio}
+                </p>
+              )}
+              {userData.email && (
+                <p className="text-gray-500 text-xs mt-1">
+                  {userData.email}
+                </p>
+              )}
             </div>
           </div>
 

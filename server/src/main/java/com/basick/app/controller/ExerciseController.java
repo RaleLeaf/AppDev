@@ -4,10 +4,22 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.basick.app.dto.exercise.*;
+import com.basick.app.dto.exercise.CreateExerciseRequest;
+import com.basick.app.dto.exercise.ExerciseDTO;
+import com.basick.app.dto.exercise.RateExerciseRequest;
+import com.basick.app.dto.exercise.UpdateExerciseRequest;
 import com.basick.app.service.ExerciseService;
+import com.basick.app.service.ExerciseDataImportService;
 
 /**
  * REST controller for Exercise operations
@@ -17,9 +29,11 @@ import com.basick.app.service.ExerciseService;
 public class ExerciseController {
 
     private final ExerciseService exerciseService;
+    private final ExerciseDataImportService exerciseDataImportService;
 
-    public ExerciseController(ExerciseService exerciseService) {
+    public ExerciseController(ExerciseService exerciseService, ExerciseDataImportService exerciseDataImportService) {
         this.exerciseService = exerciseService;
+        this.exerciseDataImportService = exerciseDataImportService;
     }
 
     /**
@@ -151,6 +165,51 @@ public class ExerciseController {
         try {
             ExerciseDTO exercise = exerciseService.rateExercise(exerciseId, request.getRating());
             return exercise != null ? ResponseEntity.ok(exercise) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Import exercise data from CSV file
+     */
+    @PostMapping("/import")
+    public ResponseEntity<String> importExerciseData(@RequestParam String csvFilePath) {
+        try {
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import exercise data from the default CSV file
+     */
+    @PostMapping("/import/dataset")
+    public ResponseEntity<String> importDataset() {
+        try {
+            // Use the provided CSV file path
+            String csvFilePath = "c:\\Users\\User\\OneDrive\\Desktop\\Desktop\\AppDev\\client\\datas\\exercises.csv";
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import exercise data from the default CSV file
+     */
+    @GetMapping("/workout-category/{category}")
+    public ResponseEntity<List<ExerciseDTO>> getExercisesByWorkoutCategory(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "6") int limit) {
+        try {
+            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategory(category, limit);
+            return ResponseEntity.ok(exercises);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

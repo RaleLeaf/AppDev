@@ -71,7 +71,7 @@ class UserFitnessTrackerMapperTest {
         // Given
         CreateUserFitnessTrackerRequest request = new CreateUserFitnessTrackerRequest();
         request.setUserId("user1");
-        request.setTrackingDate(Timestamp.now());
+        request.setTrackingDate(Timestamp.now().toString());
         request.setNumberOfWorkouts(3);
         request.setCaloriesConsumed(2200.0);
         request.setCaloriesBurned(600.0);

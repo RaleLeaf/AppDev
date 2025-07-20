@@ -1112,7 +1112,8 @@ After completing all steps, you'll have these endpoints:
 mvn clean compile
 mvn spring-boot:run
 
-for macbook: ./mvnw spring-boot:run
+for macbook:chmod +x mvnw
+             ./mvnw spring-boot:run
 
 ```
 

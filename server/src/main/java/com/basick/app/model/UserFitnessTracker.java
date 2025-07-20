@@ -2,10 +2,12 @@ package com.basick.app.model;
 
 import com.google.cloud.Timestamp;
 
+import java.util.List;
+
 public class UserFitnessTracker {
     private String id; // Unique identifier for this record
     private String userId;
-    private Timestamp trackingDate; // Date being tracked
+    private Timestamp trackingDate; // NOT String
     private Integer numberOfWorkouts;
     private Double caloriesConsumed;
     private Double caloriesBurned;
@@ -26,6 +28,8 @@ public class UserFitnessTracker {
     // Timestamps
     private Timestamp createdAt;
     private Timestamp updatedAt;
+
+    private List<String> doneExercises;
 
     public UserFitnessTracker() {
         this.createdAt = Timestamp.now();
@@ -117,6 +121,9 @@ public class UserFitnessTracker {
 
     public Timestamp getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+
+    public List<String> getDoneExercises() { return doneExercises; }
+    public void setDoneExercises(List<String> doneExercises) { this.doneExercises = doneExercises; }
 
     // Business methods
     public void updateTimestamp() {

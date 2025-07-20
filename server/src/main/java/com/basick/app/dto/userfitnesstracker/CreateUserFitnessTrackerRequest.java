@@ -2,9 +2,11 @@ package com.basick.app.dto.userfitnesstracker;
 
 import com.google.cloud.Timestamp;
 
+import java.util.List;
+
 public class CreateUserFitnessTrackerRequest {
     private String userId;
-    private Timestamp trackingDate;
+    private String trackingDate;
     private Integer numberOfWorkouts;
     private Double caloriesConsumed;
     private Double caloriesBurned;
@@ -20,6 +22,7 @@ public class CreateUserFitnessTrackerRequest {
     private Double stressLevel;
     private String mood;
     private String notes;
+    private List<String> doneExercises;
 
     public CreateUserFitnessTrackerRequest() {}
 
@@ -27,8 +30,8 @@ public class CreateUserFitnessTrackerRequest {
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
-    public Timestamp getTrackingDate() { return trackingDate; }
-    public void setTrackingDate(Timestamp trackingDate) { this.trackingDate = trackingDate; }
+    public String getTrackingDate() { return trackingDate; }
+    public void setTrackingDate(String trackingDate) { this.trackingDate = trackingDate; }
 
     public Integer getNumberOfWorkouts() { return numberOfWorkouts; }
     public void setNumberOfWorkouts(Integer numberOfWorkouts) { this.numberOfWorkouts = numberOfWorkouts; }
@@ -74,4 +77,7 @@ public class CreateUserFitnessTrackerRequest {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public List<String> getDoneExercises() { return doneExercises; }
+    public void setDoneExercises(List<String> doneExercises) { this.doneExercises = doneExercises; }
 }
