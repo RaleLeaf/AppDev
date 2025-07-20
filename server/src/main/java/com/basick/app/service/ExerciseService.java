@@ -214,15 +214,16 @@ public class ExerciseService {
         }
     }
 
-    // Add this method:
-    public List<ExerciseDTO> getExercisesByWorkoutCategory(String workoutCategory, int limit) {
+
+    // 🏋️ NEW: Add method with environment filtering
+    public List<ExerciseDTO> getExercisesByWorkoutCategoryDifficultyAndEnvironment(String workoutCategory, String difficulty, String environment, int limit) {
         try {
-            List<Exercise> exercises = exerciseRepository.findByWorkoutCategory(workoutCategory, limit);
+            List<Exercise> exercises = exerciseRepository.findByWorkoutCategoryDifficultyAndEnvironment(workoutCategory, difficulty, environment, limit);
             return exercises.stream()
                     .map(exerciseMapper::toDTO)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            throw new RuntimeException("Error retrieving exercises by workout category: " + workoutCategory, e);
+            throw new RuntimeException("Error retrieving exercises by workout category, difficulty and environment: " + workoutCategory + ", " + difficulty + ", " + environment, e);
         }
     }
 }

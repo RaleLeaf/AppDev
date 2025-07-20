@@ -2,6 +2,8 @@ package com.basick.app.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +30,7 @@ import com.basick.app.service.ExerciseDataImportService;
 @RequestMapping("/api/exercises")
 public class ExerciseController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ExerciseController.class);
     private final ExerciseService exerciseService;
     private final ExerciseDataImportService exerciseDataImportService;
 
@@ -201,16 +204,24 @@ public class ExerciseController {
     }
 
     /**
-     * Import exercise data from the default CSV file
+     * 🏋️ UPDATED: Get exercises by workout category with environment filtering
      */
     @GetMapping("/workout-category/{category}")
     public ResponseEntity<List<ExerciseDTO>> getExercisesByWorkoutCategory(
             @PathVariable String category,
-            @RequestParam(defaultValue = "6") int limit) {
+            @RequestParam(defaultValue = "6") int limit,
+            @RequestParam String difficulty,
+            @RequestParam(defaultValue = "GYM") String environment) { // 🏋️ NEW: Add environment parameter
         try {
-            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategory(category, limit);
+            logger.info("Getting exercises for category: {}, difficulty: {}, environment: {}, limit: {}",
+                       category, difficulty, environment, limit);
+            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategoryDifficultyAndEnvironment(
+                category, difficulty, environment, limit);
+            logger.info("Found {} exercises", exercises.size());
             return ResponseEntity.ok(exercises);
         } catch (Exception e) {
+            logger.error("Error getting exercises for category {}, difficulty {}, environment {}: {}",
+                        category, difficulty, environment, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
