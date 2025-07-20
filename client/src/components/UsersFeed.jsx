@@ -548,12 +548,7 @@ const UsersFeed = () => {
             <h1 className="text-lg md:text-2xl font-bold kanit-bold tracking-wider">USERS FEED</h1>
 
             {/* Button moved to a simple icon for mobile */}
-            <button className="w-9 h-9 md:w-10 md:h-10 bg-zinc-900 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors"
-              onClick={() => setIsPostModalOpen(true)}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
+            
           </div>
 
           {/* Mobile Filter Pills - Moved below header and expanded to include Popular */}
@@ -830,16 +825,7 @@ const UsersFeed = () => {
           </div>
 
           {/* Mobile floating action button for creating a new post */}
-          <div className="md:hidden fixed bottom-20 right-4 z-10">
-            <button 
-              className="bg-lime-600 text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
-              onClick={() => setIsPostModalOpen(true)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
+          
         </div>
       </div>
 

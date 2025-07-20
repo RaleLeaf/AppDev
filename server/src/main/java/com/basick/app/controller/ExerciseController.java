@@ -2,11 +2,24 @@ package com.basick.app.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.basick.app.dto.exercise.*;
+import com.basick.app.dto.exercise.CreateExerciseRequest;
+import com.basick.app.dto.exercise.ExerciseDTO;
+import com.basick.app.dto.exercise.RateExerciseRequest;
+import com.basick.app.dto.exercise.UpdateExerciseRequest;
 import com.basick.app.service.ExerciseService;
 
 /**
@@ -16,6 +29,7 @@ import com.basick.app.service.ExerciseService;
 @RequestMapping("/api/exercises")
 public class ExerciseController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ExerciseController.class);
     private final ExerciseService exerciseService;
 
     public ExerciseController(ExerciseService exerciseService) {
@@ -152,6 +166,29 @@ public class ExerciseController {
             ExerciseDTO exercise = exerciseService.rateExercise(exerciseId, request.getRating());
             return exercise != null ? ResponseEntity.ok(exercise) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 🏋️ UPDATED: Get exercises by workout category with environment filtering
+     */
+    @GetMapping("/workout-category/{category}")
+    public ResponseEntity<List<ExerciseDTO>> getExercisesByWorkoutCategory(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "6") int limit,
+            @RequestParam String difficulty,
+            @RequestParam(defaultValue = "GYM") String environment) { // 🏋️ NEW: Add environment parameter
+        try {
+            logger.info("Getting exercises for category: {}, difficulty: {}, environment: {}, limit: {}", 
+                       category, difficulty, environment, limit);
+            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategoryDifficultyAndEnvironment(
+                category, difficulty, environment, limit);
+            logger.info("Found {} exercises", exercises.size());
+            return ResponseEntity.ok(exercises);
+        } catch (Exception e) {
+            logger.error("Error getting exercises for category {}, difficulty {}, environment {}: {}", 
+                        category, difficulty, environment, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
