@@ -1,6 +1,7 @@
 package com.basick.app.repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -162,5 +163,30 @@ public class ExerciseRepository {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error finding exercises by creator: " + createdBy, e);
         }
+    }
+
+    /**
+     * Get all existing exercise names (for duplicate checking during import)
+     */
+    public Set<String> getAllExerciseNames() {
+        try {
+            List<Exercise> allExercises = firestoreService.findAll(COLLECTION_NAME, Exercise.class);
+            return allExercises.stream()
+                    .map(Exercise::getName)
+                    .filter(name -> name != null)
+                    .map(name -> name.toLowerCase().trim())
+                    .collect(Collectors.toSet());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error getting exercise names", e);
+        }
+    }
+
+    /**
+     * Check if an exercise with the given name already exists
+     */
+    public boolean existsByName(String name) {
+        if (name == null) return false;
+        String normalizedName = name.toLowerCase().trim();
+        return getAllExerciseNames().contains(normalizedName);
     }
 }

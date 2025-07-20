@@ -1,6 +1,7 @@
 package com.basick.app.repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -209,5 +210,28 @@ public class FoodRepository {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error finding foods by dietary restrictions", e);
         }
+    }    /**
+     * Get all existing food names (for duplicate checking during import)
+     */
+    public Set<String> getAllFoodNames() {
+        try {
+            List<Food> allFoods = firestoreService.findAll(COLLECTION_NAME, Food.class);
+            return allFoods.stream()
+                    .map(Food::getName)
+                    .filter(name -> name != null)
+                    .map(name -> name.toLowerCase().trim())
+                    .collect(Collectors.toSet());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error getting food names", e);
+        }
+    }
+
+    /**
+     * Check if a food with the given name already exists
+     */
+    public boolean existsByName(String name) {
+        if (name == null) return false;
+        String normalizedName = name.toLowerCase().trim();
+        return getAllFoodNames().contains(normalizedName);
     }
 }

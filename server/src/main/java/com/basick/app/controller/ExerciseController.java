@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.basick.app.dto.exercise.*;
 import com.basick.app.service.ExerciseService;
+import com.basick.app.service.ExerciseDataImportService;
 
 /**
  * REST controller for Exercise operations
@@ -17,9 +18,11 @@ import com.basick.app.service.ExerciseService;
 public class ExerciseController {
 
     private final ExerciseService exerciseService;
+    private final ExerciseDataImportService exerciseDataImportService;
 
-    public ExerciseController(ExerciseService exerciseService) {
+    public ExerciseController(ExerciseService exerciseService, ExerciseDataImportService exerciseDataImportService) {
         this.exerciseService = exerciseService;
+        this.exerciseDataImportService = exerciseDataImportService;
     }
 
     /**
@@ -153,6 +156,36 @@ public class ExerciseController {
             return exercise != null ? ResponseEntity.ok(exercise) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Import exercise data from CSV file
+     */
+    @PostMapping("/import")
+    public ResponseEntity<String> importExerciseData(@RequestParam String csvFilePath) {
+        try {
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import exercise data from the default CSV file
+     */
+    @PostMapping("/import/dataset")
+    public ResponseEntity<String> importDataset() {
+        try {
+            // Use the provided CSV file path
+            String csvFilePath = "c:\\Users\\User\\OneDrive\\Desktop\\Desktop\\AppDev\\client\\datas\\exercises.csv";
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
         }
     }
 }
