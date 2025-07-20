@@ -18,7 +18,6 @@ import com.basick.app.dto.food.CreateFoodRequest;
 import com.basick.app.dto.food.FoodDTO;
 import com.basick.app.dto.food.UpdateFoodRequest;
 import com.basick.app.service.FoodService;
-import com.basick.app.service.FoodDataImportService;
 
 /**
  * REST Controller for Food management
@@ -28,11 +27,9 @@ import com.basick.app.service.FoodDataImportService;
 public class FoodController {
 
     private final FoodService foodService;
-    private final FoodDataImportService foodDataImportService;
 
-    public FoodController(FoodService foodService, FoodDataImportService foodDataImportService) {
+    public FoodController(FoodService foodService) {
         this.foodService = foodService;
-        this.foodDataImportService = foodDataImportService;
     }
 
     /**
@@ -47,20 +44,6 @@ public class FoodController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
-    /**
-     * Get all foods
-     */
-    @GetMapping
-    public ResponseEntity<List<FoodDTO>> getAllFoods() {
-        try {
-            List<FoodDTO> foods = foodService.getAllFoods();
-            return ResponseEntity.ok(foods);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
 
     /**
      * Get food by ID
@@ -182,7 +165,9 @@ public class FoodController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }    /**
+    }
+
+    /**
      * Verify a food entry (admin only)
      */
     @PostMapping("/{id}/verify")
@@ -196,34 +181,6 @@ public class FoodController {
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }    /**
-     * Import food data from CSV file
-     */
-    @PostMapping("/import")
-    public ResponseEntity<String> importFoodData(@RequestParam String csvFilePath) {
-        try {
-            FoodDataImportService.ImportResult result = foodDataImportService.importFoodDataFromCsv(csvFilePath);
-            return ResponseEntity.ok(result.getSummary());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Import failed: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Import food data from the default CSV file
-     */
-    @PostMapping("/import/dataset")
-    public ResponseEntity<String> importDataset() {
-        try {
-            // Use the provided CSV file path
-            String csvFilePath = "c:\\Users\\User\\OneDrive\\Desktop\\Desktop\\AppDev\\client\\datas\\FOOD-DATA-GROUP1.csv";
-            FoodDataImportService.ImportResult result = foodDataImportService.importFoodDataFromCsv(csvFilePath);
-            return ResponseEntity.ok(result.getSummary());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Import failed: " + e.getMessage());
         }
     }
 }

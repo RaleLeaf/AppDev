@@ -1,33 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../store/authStore';
-import { useUser } from '../hooks/useUser';
+import axios from 'axios';
+import { getAuth } from 'firebase/auth';
 
 function UserDetails() {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
-    const { updateCurrentUser, loading: userLoading, error: userError } = useUser();
-    const [formData, setFormData] = useState({ 
-        gender: '', 
-        dateOfBirth: '', 
-        weight: '', 
-        height: '', 
-        fitnessLevel: '', 
-        workoutFrequency: '' 
-    });
+    const [userId, setUserId] = useState(null);
+    const [formData, setFormData] = useState({ gender: '', age: '', weight: '', height: '', fitnessLevel: '', workoutFrequency: '' });
     const [step, setStep] = useState(1);
     const [error, setError] = useState('');
 
-    const today = new Date();
-    const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()).toISOString().split('T')[0];
-    const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate()).toISOString().split('T')[0];
-
+    // Fetch user ID on mount
     useEffect(() => {
-        // Redirect to login if user is not authenticated
-        if (!user) {
-            navigate('/login');
-        }
-    }, [user, navigate]);
+        (async () => {
+            const auth = getAuth();
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser) return;
+
+            const token = await firebaseUser.getIdToken();
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            try {
+                const res = await axios.get(
+                    `http://localhost:8080/api/users/firebase/${firebaseUser.uid}`
+                );
+                setUserId(res.data.id);
+            } catch (err) {
+                console.error('Failed to fetch user by UID', err);
+            }
+        })();
+    }, []);
 
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -35,106 +37,49 @@ function UserDetails() {
     };
 
     const handleNext = () => {
-        setError(''); // Clear previous errors
-        
-        // Validate current step
-        if (step === 1 && !formData.gender) {
-            setError('Please select your gender');
-            return;
-        }
-        
-        if (step === 2) {
-            if (!formData.dateOfBirth) {
-                setError('Please select your birthday');
-                return;
-            }
-            if (!formData.weight) {
-                setError('Please enter your weight');
-                return;
-            }
-            if (!formData.height) {
-                setError('Please enter your height');
-                return;
-            }
-        }
-        
-        if (step === 3 && !formData.fitnessLevel) {
-            setError('Please select your fitness level');
-            return;
-        }
-        
-        if (step === 4 && !formData.workoutFrequency) {
-            setError('Please select your workout frequency');
-            return;
-        }
-        
-        if (step === 4 && formData.workoutFrequency) {
-            setStep(5);
-            return;
-        }
-        
+        // validation per step omitted for brevity
         setStep(prev => prev + 1);
     };
 
     const handleBack = () => setStep(prev => prev - 1);
 
     const handleFinalSubmit = async () => {
-        if (!user?.uid && !user?.id) {
-            setError('User not authenticated');
-            return;
-        }
-        
-        // Validate required fields
-        if (!formData.gender || !formData.dateOfBirth || !formData.weight || !formData.height || !formData.fitnessLevel || !formData.workoutFrequency) {
-            setError('Please fill in all required fields');
-            return;
-        }
-        
+        if (!userId) return;
+        const payload = {
+            userId,
+            gender: formData.gender,
+            age: Number(formData.age),
+            weight: Number(formData.weight),
+            height: Number(formData.height),
+            fitnessLevel: formData.fitnessLevel,
+            preferences: { workoutFrequency: Number(formData.workoutFrequency) }
+        };
+
         try {
-            // Calculate age from birthday for validation
-            const birthDate = new Date(formData.dateOfBirth);
-            const today = new Date();
-            let calculatedAge = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                calculatedAge--;
-            }
-            
-            // Optional: validate age range
-            if (calculatedAge < 13 || calculatedAge > 100) {
-                setError('Please enter a valid birth date (age must be between 13 and 100)');
+            // Try update
+            await axios.put(
+                `http://localhost:8080/api/users/${userId}/profile`,
+                payload
+            );
+        } catch (err) {
+            if (err.response?.status === 404) {
+                // Create if not exists
+                await axios.post(
+                    `http://localhost:8080/api/users/${userId}/profile`,
+                    payload
+                );
+            } else {
+                console.error('Profile save error', err);
+                setError('Failed to save profile.');
                 return;
             }
-            
-            const updateData = {
-                gender: formData.gender,
-                dateOfBirth: formData.dateOfBirth,
-                weight: formData.weight ? Number(formData.weight) : null,
-                height: formData.height ? Number(formData.height) : null,
-                fitnessLevel: formData.fitnessLevel,
-                preferences: { 
-                    workoutFrequency: formData.workoutFrequency ? Number(formData.workoutFrequency) : null 
-                }
-            };
-
-            await updateCurrentUser(updateData);
-            navigate('/home');
-        } catch (err) {
-            console.error('Profile save error', err);
-            setError('Failed to save profile. Please try again.');
         }
+
+        navigate('/home');
     };
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center px-4 overflow-hidden">
-      {/* Loading state */}
-      {userLoading && (
-        <div className="fixed inset-0 bg-[#1a1a1a] bg-opacity-90 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#cfff33]"></div>
-        </div>
-      )}
-      
       {step === 1 && (
         <>
           <div className="pt-24 md:pt-10 flex justify-center">
@@ -163,9 +108,9 @@ function UserDetails() {
             ))}
           </div>
 
-          {(error || userError) && (
+          {error && (
             <div className='flex items-center justify-center'>
-              <h3 className='text-red-700 michroma-regular text-sm'>{error || userError}</h3>
+              <h3 className='text-red-700 michroma-regular text-sm'>{error}</h3>
             </div>
           )}
 
@@ -188,28 +133,42 @@ function UserDetails() {
           </div>
           <div className="flex justify-center">
             <h4 className="michroma-regular text-[10px] md:text-sm pt-3 tracking-wide text-white text-center">
-              TO CREATE YOUR PERSONALIZED PLAN, <br /> WE NEED YOUR BIRTHDAY, WEIGHT, AND HEIGHT
+              TO CREATE YOUR PERSONALIZED PLAN, <br /> WE NEED YOUR AGE, WEIGHT, AND HEIGHT
             </h4>
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-12 md:gap-32 p-8 md:pt-24">
             <div className="flex flex-col items-center">
-              <h3 className="gothic-regular text-lg md:text-2xl mb-4 text-white">BIRTHDAY</h3>
-              <input
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                min={minDate}
-                max={maxDate}
-                className="bg-[#3a3a3a] text-white p-3 rounded text-center text-lg md:text-xl focus:outline-none focus:ring-2 focus:ring-[#cfff33] focus:border-transparent"
-              />
+              <h3 className="gothic-regular text-lg md:text-2xl mb-2 text-white">AGE</h3>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => handleChange('age', Math.max((formData.age || 10) - 1, 10))}
+                  className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="10"
+                  max="80"
+                  value={formData.age || ''}
+                  onChange={(e) => handleChange('age', parseInt(e.target.value))}
+                  className="appearance-none bg-transparent border-b-2 border-[#cfff33] text-center w-16 md:w-24 text-xl md:text-3xl text-white focus:outline-none"
+                />
+                <button
+                  onClick={() => handleChange('age', Math.min((formData.age || 10) + 1, 80))}
+                  className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col items-center">
               <h3 className="gothic-regular text-lg md:text-2xl mb-2 text-white">WEIGHT</h3>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => handleChange('weight', Math.max((formData.weight || 50) - 1, 30))}
+                  onClick={() => handleChange('weight', Math.max((formData.weight || 30) - 1, 30))}
                   className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
                 >
                   -
@@ -217,15 +176,14 @@ function UserDetails() {
                 <input
                   type="number"
                   min="30"
-                  max="200"
+                  max="180"
                   value={formData.weight || ''}
                   onChange={(e) => handleChange('weight', parseInt(e.target.value))}
-                  placeholder="50"
-                  className="appearance-none bg-transparent border-b-2 border-[#cfff33] text-center w-16 md:w-24 text-xl md:text-3xl text-white focus:outline-none placeholder-gray-500"
+                  className="appearance-none bg-transparent border-b-2 border-[#cfff33] text-center w-16 md:w-24 text-xl md:text-3xl text-white focus:outline-none"
                 />
                 <span className="gothic-regular ml-1 text-sm md:text-lg">kg</span>
                 <button
-                  onClick={() => handleChange('weight', Math.min((formData.weight || 50) + 1, 200))}
+                  onClick={() => handleChange('weight', Math.min((formData.weight || 30) + 1, 180))}
                   className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
                 >
                   +
@@ -237,23 +195,22 @@ function UserDetails() {
               <h3 className="gothic-regular text-lg md:text-2xl mb-2 text-white">HEIGHT</h3>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => handleChange('height', Math.max((formData.height || 170) - 1, 120))}
+                  onClick={() => handleChange('height', Math.max((formData.height || 100) - 1, 100))}
                   className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
                 >
                   -
                 </button>
                 <input
                   type="number"
-                  min="120"
+                  min="100"
                   max="250"
                   value={formData.height || ''}
                   onChange={(e) => handleChange('height', parseInt(e.target.value))}
-                  placeholder="170"
-                  className="appearance-none bg-transparent border-b-2 border-[#cfff33] text-center w-16 md:w-24 text-xl md:text-3xl text-white focus:outline-none placeholder-gray-500"
+                  className="appearance-none bg-transparent border-b-2 border-[#cfff33] text-center w-16 md:w-24 text-xl md:text-3xl text-white focus:outline-none"
                 />
                 <span className="gothic-regular ml-1 text-sm md:text-lg">cm</span>
                 <button
-                  onClick={() => handleChange('height', Math.min((formData.height || 170) + 1, 250))}
+                  onClick={() => handleChange('height', Math.min((formData.height || 100) + 1, 250))}
                   className="bg-[#333333] text-white w-10 h-10 md:w-14 md:h-14 rounded-full flex justify-center items-center text-lg md:text-2xl"
                 >
                   +
@@ -262,9 +219,9 @@ function UserDetails() {
             </div>
           </div>
 
-          {(error || userError) && (
+          {error && (
             <div className="flex items-center justify-center">
-              <h3 className="text-red-700 michroma-regular text-sm">{error || userError}</h3>
+              <h3 className="text-red-700 michroma-regular text-sm">{error}</h3>
             </div>
           )}
 
@@ -324,9 +281,9 @@ function UserDetails() {
           </div>
 
           {/* Error */}
-          {(error || userError) && (
+          {error && (
             <div className="flex items-center justify-center">
-              <h3 className="text-red-700 text-center michroma-regular text-sm">{error || userError}</h3>
+              <h3 className="text-red-700 text-center michroma-regular text-sm">{error}</h3>
             </div>
           )}
 
@@ -389,11 +346,11 @@ function UserDetails() {
               
           </div>
 
-          {(error || userError) && (
+          {/* {error && (
             <div className='flex items-center justify-center'>
-              <h3 className='text-red-700 michroma-regular text-center text-sm'>{error || userError}</h3>
+              <h3 className='text-red-700 michroma-regular text-center text-sm'>{error}</h3>
             </div>
-          )}
+          )} */}
           
             <div className="p-12 flex pt-4 flex-row items-center">
               <div className='absolute left-0 px-8'>
@@ -408,10 +365,8 @@ function UserDetails() {
               <div className='absolute right-0 px-8'>
                 <button
                   onClick={handleFinalSubmit}
-                  disabled={userLoading}
-                  className="bg-[#cfff33] mb-7 p-2 w-[120px] gothic-regular text-[15px] tracking-widest rounded-full text-black text-lg font-bold disabled:opacity-50"
-                >
-                  {userLoading ? 'SAVING...' : 'START'}
+                  className="bg-[#cfff33] mb-7 p-2 w-[120px] gothic-regular text-[15px] tracking-widest rounded-full text-black text-lg font-bold"
+                >START
                 </button>
               </div>
                 

@@ -2,176 +2,311 @@ import React, { useState, useEffect } from 'react';
 import BottomNav from './BottonNav';
 import { useNavigate } from 'react-router-dom';
 import SideNav from './SideNav';
-import useAuthStore from '../store/authStore';
-import { useUser } from '../hooks/useUser';
-import userService from '../services/userService';
+import useAuthStore from '../store/authStore'; // Import your auth store
 
 const EditProfile = () => {
   const navigate = useNavigate();
-  const { user, userId, userProfileId } = useAuthStore();
-  const { updateCurrentUser, loading, error } = useUser();
-  const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200");
-  const [userProfile, setUserProfile] = useState(null);
+  const { user, isAuthenticated } = useAuthStore(); // Get user from auth store
+  const [profileImage, setProfileImage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
+  // Initialize with empty user data structure matching your server models
   const [userData, setUserData] = useState({
-    name: "",
+    // User model fields (keeping only email)
     email: "",
-    username: "",
-    phone: "",
-    birthdate: "",
+    
+    // UserProfile model fields
+    displayName: "", // This will be the user's primary name
+    bio: "",
+    gender: "",
+    age: "",
     height: "",
     weight: "",
-    fitnessGoal: "",
-    activityLevel: ""
+    fitnessLevel: "BEGINNER", // BEGINNER, INTERMEDIATE, ADVANCED
+    fitnessGoals: [],
+    targetWeight: "",
+    dailyCalorieGoal: "",
+    weeklyWorkoutGoal: "",
+    profilePictureUrl: "",
+    
+    // Additional fields for UI
+    birthdate: ""
   });
 
-  // Fetch user profile data if userProfileId exists
+  // Load user data on component mount
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (userProfileId) {
-        try {
-          const profile = await userService.getCurrentUserProfile();
-          console.log('🔍 DEBUG - Fetched user profile:', profile);
-          setUserProfile(profile);
-        } catch (err) {
-          console.warn('Could not fetch user profile:', err);
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. Try to get from auth store first
+        if (user) {
+          setUserData(prev => ({
+            ...prev,
+            email: user.email || "",
+            displayName: user.displayName || user.name || ""
+          }));
+          
+          if (user.profilePictureUrl) {
+            setProfileImage(user.profilePictureUrl);
+          }
         }
+
+        // 2. Try to get from localStorage
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          try {
+            const parsedData = JSON.parse(storedUserData);
+            setUserData(prev => ({
+              ...prev,
+              ...parsedData,
+              birthdate: parsedData.birthdate || calculateBirthdate(parsedData.age)
+            }));
+            
+            if (parsedData.profilePictureUrl) {
+              setProfileImage(parsedData.profilePictureUrl);
+            }
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+          }
+        }
+
+        // 3. Try to fetch from API if authenticated
+        if (isAuthenticated) {
+          await fetchUserDataFromAPI();
+        }
+        
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    fetchUserProfile();
-  }, [userProfileId]);
 
-  useEffect(() => {
-    console.log('🔍 DEBUG - EditProfile user object:', {
-      user: user,
-      userProfile: userProfile,
-      userKeys: user ? Object.keys(user) : [],
-      backendUser: user?.backendUser,
-      backendUserKeys: user?.backendUser ? Object.keys(user.backendUser) : [],
-      profileKeys: userProfile ? Object.keys(userProfile) : []
-    });
-    
-    // More specific debugging for the fields we need
-    console.log('🔍 DEBUG - Specific field values:', {
-      height: {
-        user: user?.height,
-        backendUser: user?.backendUser?.height,
-        profile: userProfile?.height
-      },
-      weight: {
-        user: user?.weight,
-        backendUser: user?.backendUser?.weight,
-        profile: userProfile?.weight
-      },
-      dateOfBirth: {
-        user: user?.dateOfBirth,
-        backendUser: user?.backendUser?.dateOfBirth,
-        profile: userProfile?.dateOfBirth
-      },
-      username: {
-        user: user?.username,
-        backendUser: user?.backendUser?.username,
-        profile: userProfile?.username
-      },
-      fitnessGoals: {
-        user: user?.fitnessGoals,
-        userGoals: user?.goals,
-        backendUser: user?.backendUser?.fitnessGoals,
-        backendGoals: user?.backendUser?.goals,
-        profile: userProfile?.fitnessGoals,
-        profileGoals: userProfile?.goals
-      },
-      activityLevel: {
-        user: user?.activityLevel,
-        userFitnessLevel: user?.fitnessLevel,
-        backendUser: user?.backendUser?.activityLevel,
-        backendFitnessLevel: user?.backendUser?.fitnessLevel,
-        profile: userProfile?.activityLevel,
-        profileFitnessLevel: userProfile?.fitnessLevel
-      }
-    });
-    
-    if (user || userProfile) {
-      // Try to get data from multiple possible sources
-      const backendUser = user?.backendUser || {};
-      const profile = userProfile || {};
-      
-      // Debug fitness goals extraction
-      const fitnessGoalSources = {
-        userFitnessGoals0: user?.fitnessGoals?.[0],
-        userGoals0: user?.goals?.[0],
-        backendFitnessGoals0: backendUser.fitnessGoals?.[0],
-        backendGoals0: backendUser.goals?.[0],
-        profileFitnessGoals0: profile.fitnessGoals?.[0],
-        profileGoals0: profile.goals?.[0]
-      };
-      
-      // Debug activity level extraction
-      const activityLevelSources = {
-        userFitnessLevel: user?.fitnessLevel,
-        userActivityLevel: user?.activityLevel,
-        backendFitnessLevel: backendUser.fitnessLevel,
-        backendActivityLevel: backendUser.activityLevel,
-        profileFitnessLevel: profile.fitnessLevel,
-        profileActivityLevel: profile.activityLevel
-      };
-      
-      console.log('🔍 DEBUG - Fitness Goal Sources:', fitnessGoalSources);
-      console.log('🔍 DEBUG - Activity Level Sources:', activityLevelSources);
-      
-      const selectedFitnessGoal = user?.fitnessGoals?.[0] || backendUser.fitnessGoals?.[0] || profile.fitnessGoals?.[0] || user?.goals?.[0] || backendUser.goals?.[0] || profile.goals?.[0] || "Build muscle";
-      const selectedActivityLevel = user?.fitnessLevel || backendUser.fitnessLevel || profile.fitnessLevel || user?.activityLevel || backendUser.activityLevel || profile.activityLevel || "Beginner";
-      
-      console.log('🔍 DEBUG - Selected Values:', { selectedFitnessGoal, selectedActivityLevel });
-      
-      setUserData({
-        name: user?.name || backendUser.name || user?.displayName || profile.displayName || profile.firstName || "",
-        email: user?.email || backendUser.email || profile.email || "",
-        username: user?.username || backendUser.username || profile.username || "",
-        phone: user?.phoneNumber || backendUser.phoneNumber || user?.phone || profile.phoneNumber || "",
-        birthdate: user?.dateOfBirth || backendUser.dateOfBirth || profile.dateOfBirth ? 
-          (user?.dateOfBirth || backendUser.dateOfBirth || profile.dateOfBirth).split('T')[0] : "",
-        height: user?.height || backendUser.height || profile.height || "",
-        weight: user?.weight || backendUser.weight || profile.weight || "",
-        fitnessGoal: selectedFitnessGoal,
-        activityLevel: selectedActivityLevel
-      });
-      
-      if(user?.profilePicture || user?.profilePictureUrl || backendUser.profilePictureUrl || profile.profilePictureUrl) {
-        setProfileImage(user?.profilePicture || user?.profilePictureUrl || backendUser.profilePictureUrl || profile.profilePictureUrl);
-      }
+    loadUserData();
+  }, [user, isAuthenticated]);
+
+  // Helper function to calculate birthdate from age
+  const calculateBirthdate = (age) => {
+    if (!age) return "";
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - age;
+    return `${birthYear}-01-01`; // Default to January 1st
+  };
+
+  // Helper function to calculate age from birthdate
+  const calculateAge = (birthdate) => {
+    if (!birthdate) return "";
+    const today = new Date();
+    const birth = new Date(birthdate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
     }
-  }, [user, userProfile]);
+    return age.toString();
+  };
+
+  // Fetch user data from your API
+  const fetchUserDataFromAPI = async () => {
+    try {
+      const firebaseUid = localStorage.getItem('firebaseUid') || user?.uid || user?.firebaseUid;
+      const authToken = localStorage.getItem('authToken') || user?.accessToken;
+      
+      if (!firebaseUid || !authToken) {
+        console.log('No auth data available for API call');
+        return;
+      }
+
+      // Fetch user data from your server
+      const userResponse = await fetch(`http://localhost:8080/api/users/firebase/${firebaseUid}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (userResponse.ok) {
+        const apiUserData = await userResponse.json();
+        console.log('User data from API:', apiUserData);
+        
+        // Update user data with API response (only email now)
+        setUserData(prev => ({
+          ...prev,
+          email: apiUserData.email || prev.email
+        }));
+
+        // Try to fetch user profile data
+        try {
+          const profileResponse = await fetch(`http://localhost:8080/api/userprofiles/user/${apiUserData.id}`, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            console.log('Profile data from API:', profileData);
+            
+            setUserData(prev => ({
+              ...prev,
+              displayName: profileData.displayName || prev.displayName,
+              bio: profileData.bio || prev.bio,
+              gender: profileData.gender || prev.gender,
+              age: profileData.age?.toString() || prev.age,
+              height: profileData.height?.toString() || prev.height,
+              weight: profileData.weight?.toString() || prev.weight,
+              fitnessLevel: profileData.fitnessLevel || prev.fitnessLevel,
+              fitnessGoals: profileData.fitnessGoals || prev.fitnessGoals,
+              targetWeight: profileData.targetWeight?.toString() || prev.targetWeight,
+              dailyCalorieGoal: profileData.dailyCalorieGoal?.toString() || prev.dailyCalorieGoal,
+              weeklyWorkoutGoal: profileData.weeklyWorkoutGoal?.toString() || prev.weeklyWorkoutGoal,
+              profilePictureUrl: profileData.profilePictureUrl || prev.profilePictureUrl,
+              birthdate: calculateBirthdate(profileData.age) || prev.birthdate
+            }));
+
+            if (profileData.profilePictureUrl) {
+              setProfileImage(profileData.profilePictureUrl);
+            }
+          }
+        } catch (profileError) {
+          console.log('Profile data not found or error:', profileError);
+        }
+
+        // Store updated data in localStorage
+        localStorage.setItem('userData', JSON.stringify({
+          ...apiUserData,
+          ...userData
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching user data from API:', error);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserData(prev => ({ ...prev, [name]: value }));
+    setUserData(prev => ({
+      ...prev,
+      [name]: value,
+      // Update age when birthdate changes
+      ...(name === 'birthdate' && { age: calculateAge(value) })
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     
-    const updatedData = {
-        name: userData.name,
-        email: userData.email,
-        username: userData.username,
-        phone: userData.phone,
-        dateOfBirth: userData.birthdate,
-        height: Number(userData.height),
-        weight: Number(userData.weight),
-        goals: [userData.fitnessGoal],
-        fitnessLevel: userData.activityLevel
-    };
-
     try {
-      await updateCurrentUser(updatedData);
-      console.log("Saving profile data:", updatedData);
+      console.log("Saving profile data:", userData);
+      
+      const firebaseUid = localStorage.getItem('firebaseUid') || user?.uid || user?.firebaseUid;
+      const authToken = localStorage.getItem('authToken') || user?.accessToken;
+      
+      if (!firebaseUid || !authToken) {
+        alert('Authentication required to save profile');
+        return;
+      }
+
+      // Update user data (only email now)
+      const userUpdateData = {
+        email: userData.email
+      };
+
+      const userResponse = await fetch(`http://localhost:8080/api/users/firebase/${firebaseUid}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userUpdateData)
+      });
+
+      if (userResponse.ok) {
+        console.log('User data updated successfully');
+      }
+
+      // Update profile data
+      const profileUpdateData = {
+        displayName: userData.displayName, // This is the user's primary name
+        bio: userData.bio,
+        gender: userData.gender,
+        age: parseInt(userData.age) || null,
+        height: parseFloat(userData.height) || null,
+        weight: parseFloat(userData.weight) || null,
+        fitnessLevel: userData.fitnessLevel,
+        fitnessGoals: Array.isArray(userData.fitnessGoals) ? userData.fitnessGoals : [userData.fitnessGoals].filter(Boolean),
+        targetWeight: parseFloat(userData.targetWeight) || null,
+        dailyCalorieGoal: parseInt(userData.dailyCalorieGoal) || null,
+        weeklyWorkoutGoal: parseInt(userData.weeklyWorkoutGoal) || null,
+        profilePictureUrl: userData.profilePictureUrl || profileImage
+      };
+
+      // Try to update existing profile or create new one
+      try {
+        const profileResponse = await fetch(`http://localhost:8080/api/userprofiles/user/${firebaseUid}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(profileUpdateData)
+        });
+
+        if (profileResponse.ok) {
+          console.log('Profile updated successfully');
+        } else if (profileResponse.status === 404) {
+          // Profile doesn't exist, create it
+          const createResponse = await fetch(`http://localhost:8080/api/userprofiles`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...profileUpdateData,
+              userId: firebaseUid
+            })
+          });
+
+          if (createResponse.ok) {
+            console.log('Profile created successfully');
+          }
+        }
+      } catch (profileError) {
+        console.error('Error updating profile:', profileError);
+      }
+
+      // Update localStorage - Store the displayName as userName for HomePage usage
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('userName', userData.displayName); // Store the name for HomePage
+
+      // Show success message and navigate back
+      alert('Profile updated successfully!');
       navigate('/profile');
-    } catch (err) {
-      console.error("Failed to update profile:", err);
+      
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Error saving profile. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
+          <p>Loading profile data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row">
@@ -195,11 +330,26 @@ const EditProfile = () => {
           <div className="flex flex-col items-center mt-4 mb-8">
             <div className="relative mb-2">
               <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-lime-500">
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                {/* Facebook-style placeholder */}
+                <div 
+                  className={`w-full h-full bg-gray-600 flex items-center justify-center ${profileImage ? 'hidden' : 'flex'}`}
+                  style={{ display: profileImage ? 'none' : 'flex' }}
+                >
+                  <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
               </div>
               <label className="absolute bottom-0 right-0 bg-lime-500 rounded-full p-2 border border-black cursor-pointer hover:bg-lime-400 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -209,7 +359,10 @@ const EditProfile = () => {
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
-                    reader.onload = (e) => setProfileImage(e.target.result);
+                    reader.onload = (e) => {
+                      setProfileImage(e.target.result);
+                      setUserData(prev => ({ ...prev, profilePictureUrl: e.target.result }));
+                    };
                     reader.readAsDataURL(e.target.files[0]);
                   }
                 }} />
@@ -224,24 +377,14 @@ const EditProfile = () => {
             {/* Basic Information */}
             <div className="space-y-6 mb-8">
               <div>
-                <label className="block text-zinc-400 text-xs mb-1">Full Name</label>
+                <label className="block text-zinc-400 text-xs mb-1">Name</label>
                 <input
                   type="text"
-                  name="name"
+                  name="displayName"
                   className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
                   value={userData.name}
                   onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-400 text-xs mb-1">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
-                  value={userData.username}
-                  onChange={handleChange}
+                  placeholder="Enter your name"
                 />
               </div>
 
@@ -253,17 +396,7 @@ const EditProfile = () => {
                   className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
                   value={userData.email}
                   onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-400 text-xs mb-1">Phone Number</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
-                  value={userData.phone}
-                  onChange={handleChange}
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -275,6 +408,34 @@ const EditProfile = () => {
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
                   value={userData.birthdate}
                   onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 text-xs mb-1">Gender</label>
+                <select
+                  name="gender"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  value={userData.gender}
+                  onChange={handleChange}
+                >
+                  <option value="">Select gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                  <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 text-xs mb-1">Bio</label>
+                <textarea
+                  name="bio"
+                  rows="3"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors resize-none"
+                  value={userData.bio}
+                  onChange={handleChange}
+                  placeholder="Tell us about yourself..."
                 />
               </div>
             </div>
@@ -292,6 +453,7 @@ const EditProfile = () => {
                     className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
                     value={userData.height}
                     onChange={handleChange}
+                    placeholder="Height in cm"
                   />
                 </div>
                 <div>
@@ -302,50 +464,85 @@ const EditProfile = () => {
                     className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
                     value={userData.weight}
                     onChange={handleChange}
+                    placeholder="Weight in kg"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-zinc-400 text-xs mb-1">Fitness Goal</label>
+                <label className="block text-zinc-400 text-xs mb-1">Fitness Level</label>
                 <select
-                  name="fitnessGoal"
+                  name="fitnessLevel"
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
-                  value={userData.fitnessGoal}
+                  value={userData.fitnessLevel}
                   onChange={handleChange}
                 >
-                  <option value="Lose weight">Lose weight</option>
-                  <option value="Build muscle">Build muscle</option>
-                  <option value="Improve endurance">Improve endurance</option>
-                  <option value="General fitness">General fitness</option>
-                  <option value="Athletic performance">Athletic performance</option>
+                  <option value="BEGINNER">Beginner</option>
+                  <option value="INTERMEDIATE">Intermediate</option>
+                  <option value="ADVANCED">Advanced</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-zinc-400 text-xs mb-1">Activity Level</label>
-                <select
-                  name="activityLevel"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
-                  value={userData.activityLevel}
-                  onChange={handleChange}
-                >
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-zinc-400 text-xs mb-1">Target Weight (kg)</label>
+                  <input
+                    type="number"
+                    name="targetWeight"
+                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    value={userData.targetWeight}
+                    onChange={handleChange}
+                    placeholder="Target weight"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 text-xs mb-1">Age</label>
+                  <input
+                    type="number"
+                    name="age"
+                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    value={userData.age}
+                    onChange={handleChange}
+                    placeholder="Age"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-zinc-400 text-xs mb-1">Daily Calorie Goal</label>
+                  <input
+                    type="number"
+                    name="dailyCalorieGoal"
+                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    value={userData.dailyCalorieGoal}
+                    onChange={handleChange}
+                    placeholder="Calories/day"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 text-xs mb-1">Weekly Workout Goal</label>
+                  <input
+                    type="number"
+                    name="weeklyWorkoutGoal"
+                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    value={userData.weeklyWorkoutGoal}
+                    onChange={handleChange}
+                    placeholder="Workouts/week"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           <div className="px-5 mb-8 mt-auto sticky bottom-16 md:bottom-8 bg-gradient-to-t from-black via-black to-transparent pt-4">
-            {error && <p className="text-red-500 text-center mb-2">{error.message || "An error occurred"}</p>}
             <button 
               type="submit"
-              className="w-full py-3.5 bg-lime-500 rounded-full text-black font-medium kanit-medium hover:bg-lime-400 transition-colors disabled:bg-gray-500"
-              disabled={loading}
+              disabled={saving}
+              className="w-full py-3.5 bg-lime-500 rounded-full text-black font-medium kanit-medium hover:bg-lime-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving Changes...' : 'Save Changes'}
             </button>
           </div>
         </form>

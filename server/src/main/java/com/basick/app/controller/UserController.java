@@ -118,21 +118,6 @@ public class UserController {
     }
 
     /**
-     * Update user by Firebase UID
-     */
-    @PutMapping("/firebase/{firebaseUid}")
-    public ResponseEntity<UserDTO> updateUserByFirebaseUid(
-            @PathVariable String firebaseUid,
-            @RequestBody UpdateUserRequest request) {
-        try {
-            UserDTO user = userService.updateUser(firebaseUid, request);
-            return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
      * Delete user
      */
     @DeleteMapping("/{userId}")

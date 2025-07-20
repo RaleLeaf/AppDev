@@ -1,5 +1,4 @@
 import api from './api';
-import useAuthStore from '../store/authStore';
 
 class UserService {
   // Create a new user in the backend
@@ -49,108 +48,11 @@ class UserService {
   // Update user
   async updateUser(userId, userData) {
     try {
-      // If the userId looks like a Firebase UID, use the Firebase endpoint
-      if (userId && userId.length > 20) {
-        const response = await api.put(`/api/users/firebase/${userId}`, userData);
-        return response.data;
-      } else {
-        const response = await api.put(`/api/users/${userId}`, userData);
-        return response.data;
-      }
+      const response = await api.put(`/api/users/${userId}`, userData);
+      return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
       throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Updates a user's profile information using the stored userProfileId.
-   * @param {object} profileData - The profile data to update.
-   * @returns {Promise<object>} The updated user profile.
-   */
-  async updateUserProfile(profileData) {
-    try {
-      const userProfileId = useAuthStore.getState().userProfileId;
-      if (!userProfileId) {
-        throw new Error("No userProfileId found in the auth store. Cannot update profile.");
-      }
-      const response = await api.put(`/api/user-profiles/${userProfileId}`, profileData);
-      return this.handleSuccess(response, 'User profile updated successfully.');
-    } catch (error) {
-      throw this.handleError(error, 'Error updating user profile');
-    }
-  }
-
-  /**
-   * Updates a user's profile information by the profile's own document ID.
-   * @param {string} userProfileId - The document ID of the user profile.
-   * @param {object} profileData - The profile data to update.
-   * @returns {Promise<object>} The updated user profile.
-   */
-  async updateUserProfileById(userProfileId, profileData) {
-    try {
-      const response = await api.put(`/api/user-profiles/${userProfileId}`, profileData);
-      return this.handleSuccess(response, 'User profile updated successfully.');
-    } catch (error) {
-      throw this.handleError(error, 'Error updating user profile');
-    }
-  }
-
-  /**
-   * Fetches the current user's profile using the stored userProfileId.
-   * @returns {Promise<object>} The user profile.
-   */
-  async getCurrentUserProfile() {
-    try {
-      const { userProfileId, user } = useAuthStore.getState();
-      
-      // Try to fetch by userProfileId first
-      if (userProfileId) {
-        try {
-          const response = await api.get(`/api/user-profiles/${userProfileId}`);
-          return this.handleSuccess(response, 'User profile fetched successfully.');
-        } catch (error) {
-          console.warn('Failed to fetch profile by userProfileId, trying Firebase UID fallback:', error.message);
-        }
-      }
-      
-      // Fallback to Firebase UID if userProfileId fails or doesn't exist
-      if (user?.uid) {
-        const response = await api.get(`/api/user-profiles/by-firebase/${user.uid}`);
-        return this.handleSuccess(response, 'User profile fetched successfully via Firebase UID.');
-      }
-      
-      throw new Error("No userProfileId or Firebase UID found. Cannot fetch profile.");
-    } catch (error) {
-      throw this.handleError(error, 'Error fetching user profile');
-    }
-  }
-
-  /**
-   * Fetches a user's profile by their Firebase UID (for external lookups).
-   * @param {string} firebaseUid - The Firebase UID of the user.
-   * @returns {Promise<object>} The user profile.
-   */
-  async getUserProfile(firebaseUid) {
-    try {
-      const response = await api.get(`/api/user-profiles/by-firebase/${firebaseUid}`);
-      return this.handleSuccess(response, 'User profile fetched successfully.');
-    } catch (error) {
-      throw this.handleError(error, 'Error fetching user profile');
-    }
-  }
-
-  /**
-   * Creates a new user profile.
-   * @param {object} profileData - The profile data for the new user.
-   * @returns {Promise<object>} The newly created user profile.
-   */
-  async createUserProfile(profileData) {
-    try {
-      const response = await api.post('/api/user-profiles', profileData);
-      return this.handleSuccess(response, 'User profile created successfully.');
-    } catch (error) {
-      throw this.handleError(error, 'Error creating user profile');
     }
   }
 
@@ -179,12 +81,8 @@ class UserService {
   }
 
   // Follow user
-  async followUser(targetUserId) {
+  async followUser(userId, targetUserId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot follow user.");
-      }
       const response = await api.post(`/api/users/${userId}/follow/${targetUserId}`);
       return response.data;
     } catch (error) {
@@ -194,12 +92,8 @@ class UserService {
   }
 
   // Unfollow user
-  async unfollowUser(targetUserId) {
+  async unfollowUser(userId, targetUserId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot unfollow user.");
-      }
       const response = await api.delete(`/api/users/${userId}/follow/${targetUserId}`);
       return response.data;
     } catch (error) {
@@ -209,12 +103,8 @@ class UserService {
   }
 
   // Block user
-  async blockUser(targetUserId) {
+  async blockUser(userId, targetUserId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot block user.");
-      }
       const response = await api.post(`/api/users/${userId}/block/${targetUserId}`);
       return response.data;
     } catch (error) {
@@ -224,12 +114,8 @@ class UserService {
   }
 
   // Unblock user
-  async unblockUser(targetUserId) {
+  async unblockUser(userId, targetUserId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot unblock user.");
-      }
       const response = await api.delete(`/api/users/${userId}/block/${targetUserId}`);
       return response.data;
     } catch (error) {
@@ -238,13 +124,9 @@ class UserService {
     }
   }
 
-  // Get current user's followers
-  async getMyFollowers() {
+  // Get user followers
+  async getUserFollowers(userId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot fetch followers.");
-      }
       const response = await api.get(`/api/users/${userId}/followers`);
       return response.data;
     } catch (error) {
@@ -253,13 +135,9 @@ class UserService {
     }
   }
 
-  // Get current user's following
-  async getMyFollowing() {
+  // Get user following
+  async getUserFollowing(userId) {
     try {
-      const userId = useAuthStore.getState().userId;
-      if (!userId) {
-        throw new Error("No userId found in the auth store. Cannot fetch following.");
-      }
       const response = await api.get(`/api/users/${userId}/following`);
       return response.data;
     } catch (error) {
@@ -320,12 +198,6 @@ class UserService {
       // Other error
       return new Error(`Error: ${error.message}`);
     }
-  }
-
-  // Helper method to handle API success responses
-  handleSuccess(response, message = 'Operation successful') {
-    console.log(message);
-    return response.data;
   }
 }
 

@@ -15,7 +15,6 @@ public class CreateUserProfileRequest {
     private String profilePictureUrl;
     private String bio;
     private String gender;
-    private String dateOfBirth;  // Birthday in YYYY-MM-DD format
     private Integer age;
     private Double height;  // in cm
     private Double weight;  // in kg
@@ -63,9 +62,6 @@ public class CreateUserProfileRequest {
 
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
-
-    public String getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
 
     public Integer getAge() { return age; }
     public void setAge(Integer age) { this.age = age; }

@@ -51,8 +51,6 @@ public class UserMapper {
         }
 
         UserDTO userDTO = new UserDTO();
-        userDTO.setUserId(user.getUserId());  // Map the Firestore document ID
-        userDTO.setUserProfileId(user.getUserProfileId());  // Map the user profile reference
         userDTO.setFirebaseUid(user.getFirebaseUid());
         userDTO.setName(user.getName());
         userDTO.setEmail(user.getEmail());

@@ -5,37 +5,35 @@ import java.util.List;
 import com.google.cloud.Timestamp;
 
 public class User {
-    private String firebaseUid; // Firebase UID
-    private String userId; // The document ID of this User object
-    private String userProfileId; // Reference to UserProfile document ID
-    private String email;
-    private String name; // Optional: can be a display name
-    private String phoneNumber; // Optional
-    private Boolean isEmailVerified;
-    private Boolean isPhoneVerified;
-    private Boolean isActive;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
-    private Timestamp lastLoginAt;
+    protected String firebaseUid; // Firebase authentication UID
+    protected String name;
+    protected String email;
+    protected String phoneNumber;
+    protected Boolean isEmailVerified;
+    protected Boolean isPhoneVerified;
+    protected Boolean isActive;
+    protected Timestamp createdAt;
+    protected Timestamp updatedAt;
+    protected Timestamp lastLoginAt;
 
     // Authentication and Authorization
-    private String authType; // ("EMAIL", "GOOGLE", "APPLE", "FACEBOOK")
-    private String role; // ("USER", "TRAINER", "ADMIN", "PREMIUM_USER")
+    protected String authType; // ("EMAIL", "GOOGLE", "APPLE", "FACEBOOK")
+    protected String role; // ("USER", "TRAINER", "ADMIN", "PREMIUM_USER")
     
     // Social features
-    private List<String> following; // User IDs this user follows
-    private List<String> followers; // User IDs that follow this user
-    private List<String> blockedUsers; // Blocked user IDs
+    protected List<String> following; // User IDs this user follows
+    protected List<String> followers; // User IDs that follow this user
+    protected List<String> blockedUsers; // Blocked user IDs
     
     // Notification preferences
-    private Boolean pushNotificationsEnabled;
-    private Boolean emailNotificationsEnabled;
-    private Boolean workoutRemindersEnabled;
-    private Boolean socialNotificationsEnabled;
+    protected Boolean pushNotificationsEnabled;
+    protected Boolean emailNotificationsEnabled;
+    protected Boolean workoutRemindersEnabled;
+    protected Boolean socialNotificationsEnabled;
 
     // Account status
-    private String subscriptionType; // ("FREE", "PREMIUM", "TRAINER")
-    private Timestamp subscriptionExpiresAt;
+    protected String subscriptionType; // ("FREE", "PREMIUM", "TRAINER")
+    protected Timestamp subscriptionExpiresAt;
 
     public User() {
         this.isEmailVerified = false;
@@ -61,8 +59,6 @@ public class User {
 
     // Setters
     public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
-    public void setUserId(String userId) { this.userId = userId; }
-    public void setUserProfileId(String userProfileId) { this.userProfileId = userProfileId; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
@@ -86,10 +82,8 @@ public class User {
     
     // Getters
     public String getFirebaseUid() { return firebaseUid; }
-    public String getUserId() { return userId; }
-    public String getUserProfileId() { return userProfileId; }
-    public String getEmail() { return email; }
     public String getName() { return name; }
+    public String getEmail() { return email; }
     public String getPhoneNumber() { return phoneNumber; }
     public Boolean getIsEmailVerified() { return isEmailVerified; }
     public Boolean getIsPhoneVerified() { return isPhoneVerified; }

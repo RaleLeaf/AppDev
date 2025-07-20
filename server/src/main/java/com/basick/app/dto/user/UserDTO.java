@@ -6,8 +6,6 @@ import java.util.List;
  * Data Transfer Object for User
  */
 public class UserDTO {
-    private String userId;  // Add the Firestore document ID
-    private String userProfileId;  // Add the user profile reference
     private String firebaseUid;
     private String name;
     private String email;
@@ -34,12 +32,6 @@ public class UserDTO {
     public UserDTO() {}
 
     // Getters and Setters
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-
-    public String getUserProfileId() { return userProfileId; }
-    public void setUserProfileId(String userProfileId) { this.userProfileId = userProfileId; }
-
     public String getFirebaseUid() { return firebaseUid; }
     public void setFirebaseUid(String firebaseUid) { this.firebaseUid = firebaseUid; }
 

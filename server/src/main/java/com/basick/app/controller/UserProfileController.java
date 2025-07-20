@@ -5,30 +5,16 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.basick.app.dto.userprofile.AddAchievementRequest;
-import com.basick.app.dto.userprofile.CreateUserProfileRequest;
-import com.basick.app.dto.userprofile.UpdateFitnessGoalsRequest;
-import com.basick.app.dto.userprofile.UpdateFitnessMetricsRequest;
-import com.basick.app.dto.userprofile.UpdatePrivacySettingsRequest;
-import com.basick.app.dto.userprofile.UpdateProfilePictureRequest;
-import com.basick.app.dto.userprofile.UpdateUserProfileRequest;
-import com.basick.app.dto.userprofile.UserProfileDTO;
+import com.basick.app.dto.userprofile.*;
 import com.basick.app.service.UserProfileService;
 
 /**
  * REST controller for UserProfile operations
  */
 @RestController
-@RequestMapping("/api/user-profiles")
+@RequestMapping("/api/users/{userId}/profile")
 // @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class UserProfileController {
 
@@ -40,38 +26,12 @@ public class UserProfileController {
     }
 
     /**
-     * Get user profile by userProfileId
-     */
-    @GetMapping("/{userProfileId}")
-    public ResponseEntity<UserProfileDTO> getUserProfileById(@PathVariable String userProfileId) {
-        try {
-            UserProfileDTO profile = userProfileService.getUserProfileById(userProfileId);
-            return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
      * Get user profile by user ID
      */
-    @GetMapping("/by-user/{userId}")
-    public ResponseEntity<UserProfileDTO> getUserProfileByUserId(@PathVariable String userId) {
+    @GetMapping
+    public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable String userId) {
         try {
             UserProfileDTO profile = userProfileService.getUserProfileByUserId(userId);
-            return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * Get user profile by Firebase UID
-     */
-    @GetMapping("/by-firebase/{firebaseUid}")
-    public ResponseEntity<UserProfileDTO> getUserProfileByFirebaseUid(@PathVariable String firebaseUid) {
-        try {
-            UserProfileDTO profile = userProfileService.getUserProfileByFirebaseUid(firebaseUid);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -93,29 +53,14 @@ public class UserProfileController {
     }
 
     /**
-     * Update user profile by its own ID
+     * Update user profile
      */
-    @PutMapping("/{userProfileId}")
+    @PutMapping
     public ResponseEntity<UserProfileDTO> updateUserProfile(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody UpdateUserProfileRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.updateUserProfile(userProfileId, request);
-            return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * Update user profile by Firebase UID
-     */
-    @PutMapping("/by-firebase/{firebaseUid}")
-    public ResponseEntity<UserProfileDTO> updateUserProfileByFirebaseUid(
-            @PathVariable String firebaseUid,
-            @RequestBody UpdateUserProfileRequest request) {
-        try {
-            UserProfileDTO profile = userProfileService.updateUserProfileByFirebaseUid(firebaseUid, request);
+            UserProfileDTO profile = userProfileService.updateUserProfile(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -125,10 +70,10 @@ public class UserProfileController {
     /**
      * Delete user profile
      */
-    @DeleteMapping("/{userProfileId}")
-    public ResponseEntity<Void> deleteUserProfile(@PathVariable String userProfileId) {
+    @DeleteMapping
+    public ResponseEntity<Void> deleteUserProfile(@PathVariable String userId) {
         try {
-            boolean deleted = userProfileService.deleteUserProfile(userProfileId);
+            boolean deleted = userProfileService.deleteUserProfile(userId);
             return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -138,12 +83,12 @@ public class UserProfileController {
     /**
      * Update profile picture
      */
-    @PutMapping("/{userProfileId}/picture")
+    @PutMapping("/picture")
     public ResponseEntity<UserProfileDTO> updateProfilePicture(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody UpdateProfilePictureRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.updateProfilePicture(userProfileId, request);
+            UserProfileDTO profile = userProfileService.updateProfilePicture(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -153,12 +98,12 @@ public class UserProfileController {
     /**
      * Update fitness metrics
      */
-    @PutMapping("/{userProfileId}/fitness-metrics")
+    @PutMapping("/fitness")
     public ResponseEntity<UserProfileDTO> updateFitnessMetrics(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody UpdateFitnessMetricsRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.updateFitnessMetrics(userProfileId, request);
+            UserProfileDTO profile = userProfileService.updateFitnessMetrics(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -168,12 +113,12 @@ public class UserProfileController {
     /**
      * Update privacy settings
      */
-    @PutMapping("/{userProfileId}/privacy")
+    @PutMapping("/privacy")
     public ResponseEntity<UserProfileDTO> updatePrivacySettings(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody UpdatePrivacySettingsRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.updatePrivacySettings(userProfileId, request);
+            UserProfileDTO profile = userProfileService.updatePrivacySettings(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -183,12 +128,12 @@ public class UserProfileController {
     /**
      * Update fitness goals
      */
-    @PutMapping("/{userProfileId}/fitness-goals")
+    @PutMapping("/goals")
     public ResponseEntity<UserProfileDTO> updateFitnessGoals(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody UpdateFitnessGoalsRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.updateFitnessGoals(userProfileId, request);
+            UserProfileDTO profile = userProfileService.updateFitnessGoals(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -198,12 +143,12 @@ public class UserProfileController {
     /**
      * Add achievement
      */
-    @PostMapping("/{userProfileId}/achievements")
+    @PostMapping("/achievements")
     public ResponseEntity<UserProfileDTO> addAchievement(
-            @PathVariable String userProfileId,
+            @PathVariable String userId,
             @RequestBody AddAchievementRequest request) {
         try {
-            UserProfileDTO profile = userProfileService.addAchievement(userProfileId, request);
+            UserProfileDTO profile = userProfileService.addAchievement(userId, request);
             return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -211,12 +156,25 @@ public class UserProfileController {
     }
 
     /**
-     * Get public profiles
+     * Update workout streak
+     */
+    @PutMapping("/streak")
+    public ResponseEntity<UserProfileDTO> updateWorkoutStreak(@PathVariable String userId) {
+        try {
+            UserProfileDTO profile = userProfileService.updateWorkoutStreak(userId);
+            return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get public profiles (for discovery)
      */
     @GetMapping("/public")
     public ResponseEntity<List<UserProfileDTO>> getPublicProfiles() {
         try {
-            List<UserProfileDTO> profiles = userProfileService.getPublicUserProfiles();
+            List<UserProfileDTO> profiles = userProfileService.getPublicProfiles();
             return ResponseEntity.ok(profiles);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
