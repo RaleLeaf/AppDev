@@ -26,7 +26,8 @@ const AddFood = () => {
 
   // Updated food categories to match your backend data
   const categories = [
-    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT'
+    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT', 'FRUITS', 'VEGETABLES', 
+    'GRAINS', 'NUTS', 'BEVERAGES', 'SNACKS', 'OILS', 'SPICES'
   ];
 
   // Get auth token
