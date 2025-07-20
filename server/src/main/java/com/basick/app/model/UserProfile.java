@@ -1,5 +1,8 @@
 package com.basick.app.model;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -11,8 +14,11 @@ import com.google.cloud.Timestamp;
  * UserProfile is an extension of User containing additional profile/fitness/social info.
  */
 public class UserProfile extends User {
-    // Additional profile fields beyond User
+    // Document ID fields
+    private String userProfileId;  // The document ID of this UserProfile in Firestore
     private String userId;  // Reference to User document ID for linking
+    
+    // Additional profile fields beyond User
     private String username;
     private String displayName;
     private String firstName;
@@ -21,6 +27,7 @@ public class UserProfile extends User {
     private String profilePictureUrl;
     private String bio;
     private String gender;
+    private String dateOfBirth;  // Birthday in YYYY-MM-DD format
     private Integer age;
     private Double height;  // in cm
     private Double weight;  // in kg
@@ -81,7 +88,13 @@ public class UserProfile extends User {
     // Getters and Setters for UserProfile-specific fields
     // Note: Basic User fields (firebaseUid, email, name, etc.) are inherited
 
+    public String getUserProfileId() { return userProfileId; }
+    public void setUserProfileId(String userProfileId) { this.userProfileId = userProfileId; }
+
+    @Override
     public String getUserId() { return userId; }
+    
+    @Override
     public void setUserId(String userId) { this.userId = userId; }
 
     public String getUsername() { return username; }
@@ -106,6 +119,12 @@ public class UserProfile extends User {
 
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
+
+    public String getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(String dateOfBirth) { 
+        this.dateOfBirth = dateOfBirth;
+        calculateAge();
+    }
 
     public Integer getAge() { return age; }
     public void setAge(Integer age) { this.age = age; }
@@ -328,6 +347,26 @@ public class UserProfile extends User {
     public void updateProfile() {
         this.setUpdatedAt(Timestamp.now()); // Use inherited setter
         calculateBMI();
+        calculateAge();
         updateRank();
+    }
+    
+    // Calculate age from dateOfBirth
+    private void calculateAge() {
+        if (this.dateOfBirth != null && !this.dateOfBirth.isEmpty()) {
+            try {
+                LocalDate birthDate = LocalDate.parse(this.dateOfBirth, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                LocalDate currentDate = LocalDate.now();
+                this.age = (int) ChronoUnit.YEARS.between(birthDate, currentDate);
+            } catch (Exception e) {
+                // If parsing fails, keep existing age or set to null
+                System.err.println("Error parsing dateOfBirth: " + this.dateOfBirth + " - " + e.getMessage());
+            }
+        }
+    }
+    
+    // Public method to manually trigger age calculation
+    public void recalculateAge() {
+        calculateAge();
     }
 }

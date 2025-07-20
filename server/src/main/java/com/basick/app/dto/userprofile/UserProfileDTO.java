@@ -2,6 +2,7 @@ package com.basick.app.dto.userprofile;
 
 import java.util.List;
 import java.util.Map;
+
 import com.basick.app.dto.user.UserDTO;
 import com.google.cloud.Timestamp;
 
@@ -10,7 +11,7 @@ import com.google.cloud.Timestamp;
  */
 public class UserProfileDTO extends UserDTO {
     // Additional profile fields beyond User
-    private String userId;  // Reference to User entity for linking
+    // Note: userId and userProfileId are inherited from UserDTO
     private String username;
     private String displayName;
     private String firstName;
@@ -19,6 +20,7 @@ public class UserProfileDTO extends UserDTO {
     private String profilePictureUrl;
     private String bio;
     private String gender;
+    private String dateOfBirth;  // Birthday in YYYY-MM-DD format
     private Integer age;
     private Double height;
     private Double weight;
@@ -68,11 +70,8 @@ public class UserProfileDTO extends UserDTO {
     }
 
     // Getters and Setters for UserProfile-specific fields
-    // Note: Basic User fields (id, email, name, etc.) are inherited from UserDTO
+    // Note: Basic User fields (userId, userProfileId, email, name, etc.) are inherited from UserDTO
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-    
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     
@@ -95,6 +94,9 @@ public class UserProfileDTO extends UserDTO {
     
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
+    
+    public String getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     
     public Integer getAge() { return age; }
     public void setAge(Integer age) { this.age = age; }

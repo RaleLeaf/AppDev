@@ -20,6 +20,7 @@ import com.basick.app.dto.exercise.CreateExerciseRequest;
 import com.basick.app.dto.exercise.ExerciseDTO;
 import com.basick.app.dto.exercise.RateExerciseRequest;
 import com.basick.app.dto.exercise.UpdateExerciseRequest;
+import com.basick.app.service.ExerciseDataImportService;
 import com.basick.app.service.ExerciseService;
 
 /**
@@ -31,9 +32,11 @@ public class ExerciseController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExerciseController.class);
     private final ExerciseService exerciseService;
+    private final ExerciseDataImportService exerciseDataImportService;
 
-    public ExerciseController(ExerciseService exerciseService) {
+    public ExerciseController(ExerciseService exerciseService, ExerciseDataImportService exerciseDataImportService) {
         this.exerciseService = exerciseService;
+        this.exerciseDataImportService = exerciseDataImportService;
     }
 
     /**
