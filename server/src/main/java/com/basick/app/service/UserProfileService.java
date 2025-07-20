@@ -14,8 +14,10 @@ import com.basick.app.dto.userprofile.UpdateProfilePictureRequest;
 import com.basick.app.dto.userprofile.UpdateUserProfileRequest;
 import com.basick.app.dto.userprofile.UserProfileDTO;
 import com.basick.app.mapper.UserProfileMapper;
+import com.basick.app.model.User;
 import com.basick.app.model.UserProfile;
 import com.basick.app.repository.UserProfileRepository;
+import com.basick.app.repository.UserRepository;
 import com.google.cloud.Timestamp;
 
 /**
@@ -26,10 +28,12 @@ public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final UserProfileMapper userProfileMapper;
+    private final UserRepository userRepository;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileMapper userProfileMapper) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileMapper userProfileMapper, UserRepository userRepository) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -72,7 +76,8 @@ public class UserProfileService {
         userProfile.setCreatedAt(Timestamp.now());
         userProfile.setUpdatedAt(Timestamp.now());
         
-        userProfileRepository.save(userProfile);
+        String userProfileId = userProfileRepository.save(userProfile);
+        userProfile.setUserProfileId(userProfileId);
         
         return userProfileMapper.toUserProfileDTO(userProfile);
     }
@@ -371,5 +376,29 @@ public class UserProfileService {
      */
     public List<UserProfileDTO> getPublicProfiles() throws ExecutionException, InterruptedException {
         return getPublicUserProfiles();
+    }
+
+    /**
+     * Get user profile by Firebase UID
+     */
+    public UserProfileDTO getUserProfileByFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
+        UserProfile userProfile = userProfileRepository.findByFirebaseUid(firebaseUid);
+        return userProfile != null ? userProfileMapper.toUserProfileDTO(userProfile) : null;
+    }
+
+    /**
+     * Update user profile by Firebase UID
+     */
+    public UserProfileDTO updateUserProfileByFirebaseUid(String firebaseUid, UpdateUserProfileRequest request) 
+            throws ExecutionException, InterruptedException {
+        
+        // 1. Find the User document by Firebase UID to get the userProfileId
+        User user = userRepository.findByFirebaseUid(firebaseUid);
+        if (user == null || user.getUserProfileId() == null) {
+            return null; // User or profile link not found
+        }
+        
+        // 2. Use the userProfileId to update the profile
+        return updateUserProfile(user.getUserProfileId(), request);
     }
 }

@@ -1,36 +1,176 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BottomNav from './BottonNav';
 import { useNavigate } from 'react-router-dom';
 import SideNav from './SideNav';
+import useAuthStore from '../store/authStore';
+import { useUser } from '../hooks/useUser';
+import userService from '../services/userService';
 
 const EditProfile = () => {
   const navigate = useNavigate();
+  const { user, userId, userProfileId } = useAuthStore();
+  const { updateCurrentUser, loading, error } = useUser();
   const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200");
+  const [userProfile, setUserProfile] = useState(null);
   
-  // Mock user data with additional fields
   const [userData, setUserData] = useState({
-    name: "Sarah Wegan",
-    email: "Sarah145@mail.com",
-    username: "sarahfitness",
-    phone: "+1 (555) 123-4567",
-    birthdate: "1992-06-15",
-    height: "168",
-    weight: "62",
-    fitnessGoal: "Build muscle",
-    activityLevel: "Intermediate"
+    name: "",
+    email: "",
+    username: "",
+    phone: "",
+    birthdate: "",
+    height: "",
+    weight: "",
+    fitnessGoal: "",
+    activityLevel: ""
   });
+
+  // Fetch user profile data if userProfileId exists
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (userProfileId) {
+        try {
+          const profile = await userService.getCurrentUserProfile();
+          console.log('🔍 DEBUG - Fetched user profile:', profile);
+          setUserProfile(profile);
+        } catch (err) {
+          console.warn('Could not fetch user profile:', err);
+        }
+      }
+    };
+    
+    fetchUserProfile();
+  }, [userProfileId]);
+
+  useEffect(() => {
+    console.log('🔍 DEBUG - EditProfile user object:', {
+      user: user,
+      userProfile: userProfile,
+      userKeys: user ? Object.keys(user) : [],
+      backendUser: user?.backendUser,
+      backendUserKeys: user?.backendUser ? Object.keys(user.backendUser) : [],
+      profileKeys: userProfile ? Object.keys(userProfile) : []
+    });
+    
+    // More specific debugging for the fields we need
+    console.log('🔍 DEBUG - Specific field values:', {
+      height: {
+        user: user?.height,
+        backendUser: user?.backendUser?.height,
+        profile: userProfile?.height
+      },
+      weight: {
+        user: user?.weight,
+        backendUser: user?.backendUser?.weight,
+        profile: userProfile?.weight
+      },
+      dateOfBirth: {
+        user: user?.dateOfBirth,
+        backendUser: user?.backendUser?.dateOfBirth,
+        profile: userProfile?.dateOfBirth
+      },
+      username: {
+        user: user?.username,
+        backendUser: user?.backendUser?.username,
+        profile: userProfile?.username
+      },
+      fitnessGoals: {
+        user: user?.fitnessGoals,
+        userGoals: user?.goals,
+        backendUser: user?.backendUser?.fitnessGoals,
+        backendGoals: user?.backendUser?.goals,
+        profile: userProfile?.fitnessGoals,
+        profileGoals: userProfile?.goals
+      },
+      activityLevel: {
+        user: user?.activityLevel,
+        userFitnessLevel: user?.fitnessLevel,
+        backendUser: user?.backendUser?.activityLevel,
+        backendFitnessLevel: user?.backendUser?.fitnessLevel,
+        profile: userProfile?.activityLevel,
+        profileFitnessLevel: userProfile?.fitnessLevel
+      }
+    });
+    
+    if (user || userProfile) {
+      // Try to get data from multiple possible sources
+      const backendUser = user?.backendUser || {};
+      const profile = userProfile || {};
+      
+      // Debug fitness goals extraction
+      const fitnessGoalSources = {
+        userFitnessGoals0: user?.fitnessGoals?.[0],
+        userGoals0: user?.goals?.[0],
+        backendFitnessGoals0: backendUser.fitnessGoals?.[0],
+        backendGoals0: backendUser.goals?.[0],
+        profileFitnessGoals0: profile.fitnessGoals?.[0],
+        profileGoals0: profile.goals?.[0]
+      };
+      
+      // Debug activity level extraction
+      const activityLevelSources = {
+        userFitnessLevel: user?.fitnessLevel,
+        userActivityLevel: user?.activityLevel,
+        backendFitnessLevel: backendUser.fitnessLevel,
+        backendActivityLevel: backendUser.activityLevel,
+        profileFitnessLevel: profile.fitnessLevel,
+        profileActivityLevel: profile.activityLevel
+      };
+      
+      console.log('🔍 DEBUG - Fitness Goal Sources:', fitnessGoalSources);
+      console.log('🔍 DEBUG - Activity Level Sources:', activityLevelSources);
+      
+      const selectedFitnessGoal = user?.fitnessGoals?.[0] || backendUser.fitnessGoals?.[0] || profile.fitnessGoals?.[0] || user?.goals?.[0] || backendUser.goals?.[0] || profile.goals?.[0] || "Build muscle";
+      const selectedActivityLevel = user?.fitnessLevel || backendUser.fitnessLevel || profile.fitnessLevel || user?.activityLevel || backendUser.activityLevel || profile.activityLevel || "Beginner";
+      
+      console.log('🔍 DEBUG - Selected Values:', { selectedFitnessGoal, selectedActivityLevel });
+      
+      setUserData({
+        name: user?.name || backendUser.name || user?.displayName || profile.displayName || profile.firstName || "",
+        email: user?.email || backendUser.email || profile.email || "",
+        username: user?.username || backendUser.username || profile.username || "",
+        phone: user?.phoneNumber || backendUser.phoneNumber || user?.phone || profile.phoneNumber || "",
+        birthdate: user?.dateOfBirth || backendUser.dateOfBirth || profile.dateOfBirth ? 
+          (user?.dateOfBirth || backendUser.dateOfBirth || profile.dateOfBirth).split('T')[0] : "",
+        height: user?.height || backendUser.height || profile.height || "",
+        weight: user?.weight || backendUser.weight || profile.weight || "",
+        fitnessGoal: selectedFitnessGoal,
+        activityLevel: selectedActivityLevel
+      });
+      
+      if(user?.profilePicture || user?.profilePictureUrl || backendUser.profilePictureUrl || profile.profilePictureUrl) {
+        setProfileImage(user?.profilePicture || user?.profilePictureUrl || backendUser.profilePictureUrl || profile.profilePictureUrl);
+      }
+    }
+  }, [user, userProfile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Save logic would go here
-    console.log("Saving profile data:", userData);
-    // Show success message or navigate back
-    navigate('/profile');
+    
+    const updatedData = {
+        name: userData.name,
+        email: userData.email,
+        username: userData.username,
+        phone: userData.phone,
+        dateOfBirth: userData.birthdate,
+        height: Number(userData.height),
+        weight: Number(userData.weight),
+        goals: [userData.fitnessGoal],
+        fitnessLevel: userData.activityLevel
+    };
+
+    try {
+      await updateCurrentUser(updatedData);
+      console.log("Saving profile data:", updatedData);
+      navigate('/profile');
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+    }
   };
 
   return (
@@ -199,11 +339,13 @@ const EditProfile = () => {
           </div>
 
           <div className="px-5 mb-8 mt-auto sticky bottom-16 md:bottom-8 bg-gradient-to-t from-black via-black to-transparent pt-4">
+            {error && <p className="text-red-500 text-center mb-2">{error.message || "An error occurred"}</p>}
             <button 
               type="submit"
-              className="w-full py-3.5 bg-lime-500 rounded-full text-black font-medium kanit-medium hover:bg-lime-400 transition-colors"
+              className="w-full py-3.5 bg-lime-500 rounded-full text-black font-medium kanit-medium hover:bg-lime-400 transition-colors disabled:bg-gray-500"
+              disabled={loading}
             >
-              Save Changes
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
