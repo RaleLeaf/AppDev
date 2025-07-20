@@ -4,9 +4,20 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.basick.app.dto.exercise.*;
+import com.basick.app.dto.exercise.CreateExerciseRequest;
+import com.basick.app.dto.exercise.ExerciseDTO;
+import com.basick.app.dto.exercise.RateExerciseRequest;
+import com.basick.app.dto.exercise.UpdateExerciseRequest;
 import com.basick.app.service.ExerciseService;
 import com.basick.app.service.ExerciseDataImportService;
 
@@ -186,6 +197,21 @@ public class ExerciseController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import exercise data from the default CSV file
+     */
+    @GetMapping("/workout-category/{category}")
+    public ResponseEntity<List<ExerciseDTO>> getExercisesByWorkoutCategory(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "6") int limit) {
+        try {
+            List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategory(category, limit);
+            return ResponseEntity.ok(exercises);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
