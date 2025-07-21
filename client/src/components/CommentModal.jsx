@@ -43,7 +43,7 @@ const CommentModal = ({ post, onClose, onShare, onLikeToggle }) => {
                 if (response.ok) {
                   const userData = await response.json();
                   userName = userData.name || userData.firstName || userData.displayName || 'User';
-                  userAvatar = userData.profilePictureUrl || 'https://via.placeholder.com/32x32/374151/ffffff?text=U';
+                  userAvatar = userData.profilePictureUrl || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541';
                 }
               }
             } catch (error) {
@@ -54,7 +54,7 @@ const CommentModal = ({ post, onClose, onShare, onLikeToggle }) => {
           return {
             ...comment,
             userName: userName || 'User',
-            userAvatar: userAvatar || 'https://via.placeholder.com/32x32/374151/ffffff?text=U'
+            userAvatar: userAvatar || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'
           };
         })
       );
@@ -130,7 +130,7 @@ const CommentModal = ({ post, onClose, onShare, onLikeToggle }) => {
 
     const getCurrentUserAvatar = () => {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        return userData.profilePictureUrl || user?.profilePictureUrl || 'https://via.placeholder.com/32x32/374151/ffffff?text=U';
+        return userData.profilePictureUrl || user?.profilePictureUrl || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541';
     };
 
     const getUserName = () => {
@@ -189,7 +189,7 @@ const CommentModal = ({ post, onClose, onShare, onLikeToggle }) => {
                         {/* User Info */}
                         <div className="flex items-center mb-3">
                             <img 
-                                src={post.user?.avatar || 'https://via.placeholder.com/40x40/374151/ffffff?text=U'} 
+                                src={post.user?.avatar || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'} 
                                 alt={post.user?.name || 'User'} 
                                 className="w-10 h-10 rounded-full object-cover mr-3" 
                             />
@@ -297,7 +297,7 @@ const CommentModal = ({ post, onClose, onShare, onLikeToggle }) => {
                                     comments.map((comment, index) => (
                                         <div key={comment.id || index} className="flex items-start space-x-3">
                                             <img
-                                                src={comment.userAvatar || 'https://via.placeholder.com/32x32/374151/ffffff?text=U'}
+                                                src={comment.userAvatar || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'}
                                                 alt={comment.userName || 'User'}
                                                 className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                                             />
