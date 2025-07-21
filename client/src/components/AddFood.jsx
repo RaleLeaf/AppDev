@@ -26,7 +26,8 @@ const AddFood = () => {
 
   // Updated food categories to match your backend data
   const categories = [
-    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT'
+    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT', 'FRUITS', 'VEGETABLES', 
+    'GRAINS', 'NUTS', 'BEVERAGES', 'SNACKS', 'OILS', 'SPICES'
   ];
 
   // Get auth token
@@ -322,7 +323,7 @@ const AddFood = () => {
 
   try {
     setLoading(true);
-    
+
     // Calculate nutritional values based on grams from per 100g values
     const calculateNutrition = (per100gValue, grams) => {
       return Math.round((per100gValue || 0) * (grams / 100));
@@ -373,7 +374,7 @@ const AddFood = () => {
       } catch (error) {
         // Silent fail for usage count increment
       }
-      
+
       navigate('/macros');
     } else {
       const errorText = await response.text();
@@ -385,7 +386,6 @@ const AddFood = () => {
     setLoading(false);
   }
 };
-
 
   // Handle search input change with debouncing
   const handleSearchChange = (e) => {

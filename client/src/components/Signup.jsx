@@ -11,7 +11,8 @@ function Signup() {
         confirmPassword: ''
     });
     const [validationErrors, setValidationErrors] = useState({});
-    const { signUp, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
+    const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+    const { signUp, signInWithGoogle, error, clearErrors } = useAuthStore();
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -70,26 +71,31 @@ function Signup() {
         
         // Validate form before submitting
         if (!validateForm()) {
-            return;
+            return; // Stay on page if validation fails
         }
         
+        setIsFormSubmitting(true);
         try {
             await signUp(formData.name, formData.email, formData.password);
-            // Redirect new users to complete their profile
+            // Only navigate on successful signup
             navigate('/user-details', { replace: true });
         } catch (error) {
             console.error('Signup failed:', error);
-            // Clear password fields on error
+            // Keep name and email, only clear passwords for security
             setFormData({ 
                 ...formData, 
                 password: '', 
                 confirmPassword: '' 
             });
+            // Stay on page - no navigation happens on error
+        } finally {
+            setIsFormSubmitting(false);
         }
     };
 
     const handleGoogleSignIn = async () => {
         clearErrors();
+        setIsFormSubmitting(true);
         try {
             const user = await signInWithGoogle();
             // Check if user is new or existing and redirect accordingly
@@ -100,6 +106,9 @@ function Signup() {
             }
         } catch (error) {
             console.error('Google sign-in failed:', error);
+            // Stay on page - no navigation happens on error
+        } finally {
+            setIsFormSubmitting(false);
         }
     };
 
@@ -188,10 +197,10 @@ function Signup() {
 
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isFormSubmitting}
                             className="bg-[#cfff33] text-black py-3 rounded font-semibold w-full"
                         >
-                            {isLoading ? 'SIGNING UP...' : 'Sign Up'}
+                            {isFormSubmitting ? 'SIGNING UP...' : 'Sign Up'}
                         </button>
                     </form>
 
@@ -306,10 +315,10 @@ function Signup() {
                         </div>
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isFormSubmitting}
                             className="gothic-regular bg-[#cfff33] rounded-full px-6 ml-6"
                         >
-                            {isLoading ? 'SIGNING UP...' : 'SIGN UP'}
+                            {isFormSubmitting ? 'SIGNING UP...' : 'SIGN UP'}
                         </button>
                     </div>
 

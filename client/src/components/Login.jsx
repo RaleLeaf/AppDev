@@ -9,7 +9,8 @@ function Login() {
         email: '',
         password: ''
     });
-    const { signIn, signInWithGoogle, isLoading, error, clearErrors } = useAuthStore();
+    const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+    const { signIn, signInWithGoogle, error, clearErrors } = useAuthStore();
 
     // Get the intended destination or default to home
     const from = location.state?.from?.pathname || '/home';
@@ -24,24 +25,32 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         clearErrors();
+        setIsFormSubmitting(true);
         
         try {
             await signIn(formData.email, formData.password);
             navigate(from, { replace: true });
         } catch (error) {
             console.error('Login failed:', error);
-            // Clear only the password field on error
+            // Keep form data intact on error - only clear password for security
             setFormData({ ...formData, password: '' });
+            // Stay on page - no navigation happens on error
+        } finally {
+            setIsFormSubmitting(false);
         }
     };
 
     const handleGoogleSignIn = async () => {
         clearErrors();
+        setIsFormSubmitting(true);
         try {
             await signInWithGoogle();
             navigate(from, { replace: true });
         } catch (error) {
             console.error('Google sign-in failed:', error);
+            // Stay on page - no navigation happens on error
+        } finally {
+            setIsFormSubmitting(false);
         }
     };
 
@@ -82,10 +91,10 @@ function Login() {
                         />
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isFormSubmitting}
                             className="bg-[#cfff33] text-black py-3 rounded font-semibold w-full"
                         >
-                            {isLoading ? 'LOADING...' : 'Login'}
+                            {isFormSubmitting ? 'LOADING...' : 'Login'}
                         </button>
                     </form>
 
@@ -159,10 +168,10 @@ function Login() {
                         </div>
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isFormSubmitting}
                             className="gothic-regular bg-[#cfff33] rounded-full px-6 ml-6"
                         >
-                            {isLoading ? 'LOADING...' : 'LOGIN'}
+                            {isFormSubmitting ? 'LOADING...' : 'LOGIN'}
                         </button>
                     </div>
 
