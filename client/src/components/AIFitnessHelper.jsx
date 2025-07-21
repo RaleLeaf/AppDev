@@ -11,7 +11,8 @@ export default function FitnessChat() {
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  
+  const [recommendedExercises, setRecommendedExercises] = useState([]);
+
   // Get API key from environment variables
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const useRealAI = !!apiKey;
@@ -205,6 +206,279 @@ export default function FitnessChat() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+  if (user?.uid && !isLoadingProfile && userProfile.fitnessLevel) {
+    fetchRecommendedExercises();
+  }
+}, [user?.uid, isLoadingProfile, userProfile.fitnessLevel]);
+
+const fetchRecommendedExercises = async () => {
+  try {
+    const profile = userProfile;
+    console.log('🎯 Fetching personalized exercises for profile:', {
+      fitnessLevel: profile.fitnessLevel,
+      bmiCategory: profile.bmiCategory,
+      goals: profile.fitnessGoals,
+      age: profile.age,
+      gender: profile.gender
+    });
+    
+    const authToken = localStorage.getItem('authToken') || 
+                      localStorage.getItem('userToken') || 
+                      localStorage.getItem('gmToken') || 
+                      user?.accessToken;
+    
+    if (!authToken) {
+      console.log('❌ No auth token available');
+      return;
+    }
+
+    // Get exercises from different categories based on user profile
+    let allExercises = [];
+    
+    // 1. Get exercises by user's fitness level difficulty
+    try {
+      const difficultyResponse = await fetch(`http://localhost:8080/api/exercises/difficulty/${profile.fitnessLevel.toUpperCase()}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (difficultyResponse.ok) {
+        const difficultyExercises = await difficultyResponse.json();
+        allExercises = [...allExercises, ...difficultyExercises];
+      }
+    } catch (error) {
+      console.log('Could not fetch by difficulty:', error.message);
+    }
+
+    // 2. Get exercises by muscle groups relevant to user goals
+    const muscleGroups = ['Upper Back', 'Triceps', 'Biceps', 'Abs', 'Quads', 'Glutes', 'Delts', 'Cardiovascular System'];
+    
+    for (const muscleGroup of muscleGroups) {
+      try {
+        const muscleResponse = await fetch(`http://localhost:8080/api/exercises/muscle-group/${muscleGroup}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (muscleResponse.ok) {
+          const muscleExercises = await muscleResponse.json();
+          allExercises = [...allExercises, ...muscleExercises];
+        }
+      } catch (error) {
+        console.log(`Could not fetch ${muscleGroup} exercises:`, error.message);
+      }
+    }
+
+    // 3. Get exercises by category based on user goals
+    const categories = ['STRENGTH', 'CARDIO', 'FLEXIBILITY'];
+    for (const category of categories) {
+      try {
+        const categoryResponse = await fetch(`http://localhost:8080/api/exercises/category/${category}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (categoryResponse.ok) {
+          const categoryExercises = await categoryResponse.json();
+          allExercises = [...allExercises, ...categoryExercises];
+        }
+      } catch (error) {
+        console.log(`Could not fetch ${category} exercises:`, error.message);
+      }
+    }
+    
+    // Deduplicate exercises by ID
+    const uniqueExercises = allExercises.filter((exercise, index, self) => 
+      index === self.findIndex(e => e.id === exercise.id)
+    );
+    
+    console.log('📊 Total unique exercises found:', uniqueExercises.length);
+    
+    // Apply intelligent filtering and scoring
+    let scoredExercises = uniqueExercises
+      .filter(exercise => exercise && exercise.name)
+      .map(exercise => {
+        let score = 0;
+        
+        // Base score for having complete data
+        score += 1;
+        
+        // Difficulty match (highest priority)
+        if (exercise.difficulty?.toLowerCase() === profile.fitnessLevel?.toLowerCase()) {
+          score += 10;
+        } else if (profile.fitnessLevel === 'beginner' && exercise.difficulty?.toLowerCase() === 'intermediate') {
+          score += 5; // Allow progression
+        } else if (profile.fitnessLevel === 'intermediate' && exercise.difficulty?.toLowerCase() === 'beginner') {
+          score += 3; // Fallback option
+        }
+        
+        // Goal-based scoring
+        if (profile.fitnessGoals?.length > 0) {
+          profile.fitnessGoals.forEach(goal => {
+            const goalLower = goal.toLowerCase();
+            if (goalLower.includes('muscle') || goalLower.includes('strength') || goalLower.includes('build')) {
+              if (exercise.category?.toLowerCase() === 'strength') {
+                score += 8;
+              }
+            }
+            if (goalLower.includes('weight') || goalLower.includes('fat') || goalLower.includes('lose')) {
+              if (exercise.category?.toLowerCase() === 'cardio') {
+                score += 8;
+              }
+            }
+            if (goalLower.includes('endurance') || goalLower.includes('cardio')) {
+              if (exercise.category?.toLowerCase() === 'cardio') {
+                score += 8;
+              }
+            }
+            if (goalLower.includes('flexibility') || goalLower.includes('stretch')) {
+              if (exercise.category?.toLowerCase() === 'flexibility') {
+                score += 8;
+              }
+            }
+          });
+        }
+        
+        // BMI-based recommendations
+        if (profile.bmiCategory) {
+          if (profile.bmiCategory === 'UNDERWEIGHT') {
+            if (exercise.category?.toLowerCase() === 'strength') {
+              score += 6;
+            }
+          } else if (['OVERWEIGHT', 'OBESE'].includes(profile.bmiCategory)) {
+            if (exercise.category?.toLowerCase() === 'cardio') {
+              score += 6;
+            }
+          }
+        }
+        
+        // Age-based considerations
+        if (profile.age) {
+          if (profile.age > 50) {
+            // Prefer lower impact exercises for older users
+            if (exercise.category?.toLowerCase() === 'flexibility') {
+              score += 4;
+            }
+            // Avoid high-impact exercises
+            if (exercise.name?.toLowerCase().includes('jump') || exercise.name?.toLowerCase().includes('plyometric')) {
+              score -= 3;
+            }
+          } else if (profile.age < 30) {
+            // Younger users might enjoy high-intensity exercises
+            if (exercise.category?.toLowerCase() === 'cardio') {
+              score += 4;
+            }
+          }
+        }
+        
+        // Equipment-based scoring (prefer bodyweight for home users)
+        if (!exercise.equipmentRequired || exercise.equipmentRequired.length === 0) {
+          score += 2; // Bonus for bodyweight exercises
+        }
+        
+        // Rating and popularity bonus
+        if (exercise.averageRating > 0) {
+          score += exercise.averageRating * 2;
+        }
+        
+        if (exercise.usageCount > 0) {
+          score += Math.min(exercise.usageCount * 0.1, 3); // Cap at 3 bonus points
+        }
+        
+        return { ...exercise, score };
+      })
+      .sort((a, b) => b.score - a.score);
+    
+    console.log('✅ Top scored exercises:', scoredExercises.slice(0, 3).map(e => ({
+      name: e.name,
+      score: e.score,
+      difficulty: e.difficulty,
+      category: e.category,
+      muscleGroup: e.muscleGroup
+    })));
+    
+    // Take top 9 recommendations (3x3 grid)
+    setRecommendedExercises(scoredExercises.slice(0, 9));
+    
+  } catch (error) {
+    console.error('💥 Error fetching recommended exercises:', error);
+    setRecommendedExercises([]);
+  }
+};
+// BETTER: Navigate and auto-open the specific exercise modal
+// BETTER: Navigate and auto-open the specific exercise modal
+// FIXED: Updated handleExerciseClick to use correct category mapping
+const handleExerciseClick = (exercise) => {
+  console.log('🏋️ Navigating to exercise:', exercise.name);
+  console.log('🔍 Exercise data:', exercise);
+  
+  // Map muscle groups to the correct categories that your ExerciseList expects
+  const muscleGroupToCategoryMap = {
+    'Upper Back': 'Back',
+    'Triceps': 'Arms', 
+    'Biceps': 'Arms',
+    'Abs': 'Core',
+    'Quads': 'Legs',
+    'Glutes': 'Legs', 
+    'Delts': 'Shoulders',
+    'Cardiovascular System': 'Cardio'
+  };
+  
+  // Get the correct category for ExerciseList
+  const correctCategory = muscleGroupToCategoryMap[exercise.muscleGroup] || 'Arms';
+  
+  // Navigate to exercises page with correct parameters
+  navigate('/exercises', {
+    state: {
+      category: correctCategory, // Use mapped category instead of muscleGroup
+      title: `${correctCategory} Exercises`, // Use the correct category name
+      difficulty: exercise.difficulty?.toUpperCase() || userProfile.fitnessLevel.toUpperCase(),
+      environment: 'GYM',
+      limit: 6,
+      fromAI: true,
+      
+      // Add debug info
+      originalMuscleGroup: exercise.muscleGroup,
+      targetExercise: exercise.name,
+      
+      // Auto-open this specific exercise
+      autoOpenExercise: exercise,
+      highlightExercise: exercise.name
+    }
+  });
+};
+
+// HELPER: Get category color for exercise badges
+const getExerciseCategoryColor = (category) => {
+  if (!category) return 'bg-gray-500';
+  
+  const cat = category.toLowerCase();
+  if (cat === 'cardio') return 'bg-red-500';
+  if (cat === 'strength') return 'bg-blue-500';
+  if (cat === 'flexibility') return 'bg-green-500';
+  if (cat === 'balance') return 'bg-purple-500';
+  return 'bg-orange-500';
+};
+const getMuscleGroupImage = (muscleGroup, category) => {
+  const muscle = muscleGroup?.toLowerCase() || '';
+  const cat = category?.toLowerCase() || '';
+  
+  if (muscle.includes('chest') || muscle.includes('tricep')) return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (muscle.includes('back') || muscle.includes('upper back')) return 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (muscle.includes('bicep') || muscle.includes('arm')) return 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (muscle.includes('leg') || muscle.includes('quad') || muscle.includes('glute')) return 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (muscle.includes('abs') || muscle.includes('core')) return 'https://images.unsplash.com/photo-1594737626072-90dc274bc2bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (muscle.includes('shoulder') || muscle.includes('delt')) return 'https://images.unsplash.com/photo-1566241142559-627eb0e44d7d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (cat === 'cardio' || muscle.includes('cardiovascular')) return 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  if (cat === 'flexibility') return 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+  
+  // Default exercise image
+  return 'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+};
   // Function to fetch exercises from your backend
   const fetchExercisesFromAPI = async (filters = {}) => {
     try {
@@ -954,53 +1228,162 @@ Respond as TrainerAI:`
           </div>
         </div>
 
-        {/* Enhanced Workout Programs based on user level */}
-        {messages.length === 0 && (
-          <div className="mt-8 mb-4">
-            <h3 className="text-lg font-semibold mb-4 text-lime-500">
-              Recommended for {userProfile.fitnessLevel.charAt(0).toUpperCase() + userProfile.fitnessLevel.slice(1)}
-              {userProfile.bmiCategory && ` • ${userProfile.bmiCategory}`}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative bg-white/5 border border-purple-500 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform cursor-pointer">
-                <img
-                  src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1"
-                  alt="Drill Essentials"
-                  className="w-full h-40 md:h-48 object-cover"
-                />
-                <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent">
-                  <div className="text-white font-semibold text-sm md:text-base">
-                    {userProfile.fitnessLevel === 'beginner' ? 'Drill Essentials' : 
-                     userProfile.fitnessLevel === 'intermediate' ? 'Strength Builder' : 
-                     'Elite Performance'}
-                  </div>
-                  <div className="text-lime-500 text-xs mt-1">
-                    {userProfile.fitnessLevel === 'beginner' ? '06 Workouts · for Beginner' : 
-                     userProfile.fitnessLevel === 'intermediate' ? '08 Workouts · for Intermediate' : 
-                     '10 Workouts · for Advanced'}
-                    {userProfile.bmiCategory === 'OVERWEIGHT' && ' · Includes Cardio'}
-                  </div>
+        {/* Replace the current workout section (around line 950-1000) with this */}
+{messages.length === 0 && (
+  <div className="mt-8 mb-4">
+    <h3 className="text-lg font-semibold mb-4 text-lime-500 flex items-center justify-between">
+      <span className="flex items-center">
+        Recommended Exercises
+        <svg className="w-5 h-5 ml-2 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      </span>
+      
+      <div className="flex items-center text-xs">
+        <span className="capitalize">{userProfile.fitnessLevel}</span>
+        {userProfile.bmiCategory && ` • ${userProfile.bmiCategory}`}
+        {recommendedExercises.length > 0 && (
+          <span className="ml-2 bg-lime-500 text-black px-2 py-1 rounded-full font-medium">
+            {recommendedExercises.length}
+          </span>
+        )}
+      </div>
+    </h3>
+    
+    {recommendedExercises.length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {recommendedExercises.map((exercise, index) => (
+          <div 
+            key={exercise.id || index}
+            className="bg-zinc-900 rounded-lg sm:rounded-xl overflow-hidden mb-4 relative group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl shadow-md border border-zinc-800 hover:border-lime-500"
+            onClick={() => handleExerciseClick(exercise)}
+          >
+            {/* Exercise Image */}
+            <div className="aspect-[16/9] w-full relative">
+              <img 
+                src={getMuscleGroupImage(exercise.muscleGroup, exercise.category)}
+                alt={exercise.name}
+                className="absolute w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                onError={(e) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                }}
+              />
+              
+              {/* Category Badge - Top Left */}
+              {exercise.category && (
+                <div className={`absolute top-2 left-2 ${getExerciseCategoryColor(exercise.category)} text-white px-2 py-1 rounded-full text-xs font-semibold`}>
+                  {exercise.category}
                 </div>
+              )}
+              
+              {/* Difficulty Badge - Top Right */}
+              <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                exercise.difficulty?.toLowerCase() === 'beginner' ? 'bg-green-500 text-white' :
+                exercise.difficulty?.toLowerCase() === 'intermediate' ? 'bg-yellow-500 text-black' :
+                exercise.difficulty?.toLowerCase() === 'advanced' ? 'bg-red-500 text-white' :
+                'bg-gray-500 text-white'
+              }`}>
+                {exercise.difficulty || 'Beginner'}
               </div>
-
-              <div className="relative bg-white/5 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform cursor-pointer">
-                <img
-                  src="https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-                  alt="Wake Up Call"
-                  className="w-full h-40 md:h-48 object-cover"
-                />
-                <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent">
-                  <div className="text-white font-semibold text-sm md:text-base">
-                    {userProfile.bmiCategory === 'UNDERWEIGHT' ? 'Mass Builder' : 'Wake Up Call'}
-                  </div>
-                  <div className="text-lime-500 text-xs mt-1">
-                    04 Workouts · for {userProfile.weeklyWorkoutGoal ? `${userProfile.weeklyWorkoutGoal}× a Week` : '2× – 3× a Week'}
-                  </div>
+              
+              {/* Equipment Badge - Bottom Right */}
+              {exercise.equipmentRequired && exercise.equipmentRequired.length > 0 ? (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                  {exercise.equipmentRequired.slice(0, 2).join(', ')}
+                  {exercise.equipmentRequired.length > 2 && ' +'}
                 </div>
+              ) : (
+                <div className="absolute bottom-2 right-2 bg-lime-500 text-black px-2 py-1 rounded-full text-xs font-semibold">
+                  Bodyweight
+                </div>
+              )}
+              
+              {/* Perfect Match Badge for high scores */}
+              {exercise.score > 15 && (
+                <div className="absolute bottom-2 left-2 bg-lime-500 text-black px-2 py-1 rounded-full text-xs font-bold flex items-center">
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  PERFECT
+                </div>
+              )}
+            </div>
+            
+            {/* Exercise Info Overlay */}
+            <div className="absolute bottom-0 left-0 p-3 sm:p-4 w-full bg-gradient-to-t from-black/90 to-transparent">
+              <h2 className="text-sm sm:text-base font-bold text-white mb-1 line-clamp-2">
+                {exercise.name}
+              </h2>
+              
+              {/* Exercise Stats */}
+              <div className="flex items-center justify-between text-xs text-gray-300">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lime-500">
+                    {exercise.muscleGroup || 'Full Body'}
+                  </span>
+                  
+                  {exercise.defaultSets && exercise.defaultReps && (
+                    <span className="flex items-center">
+                      {exercise.defaultSets}×{exercise.defaultReps}
+                    </span>
+                  )}
+                </div>
+                
+                {exercise.averageRating && exercise.averageRating > 0 && (
+                  <div className="flex items-center">
+                    <svg className="w-3 h-3 mr-1 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <span className="text-yellow-400">{exercise.averageRating.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        ))}
+      </div>
+    ) : (
+      // Enhanced no exercises state
+      <div className="text-center py-8 text-gray-400">
+        <div className="mb-4">
+          <svg className="w-16 h-16 mx-auto text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <p className="text-lg font-medium mb-2">No personalized exercises found</p>
+        <p className="text-sm mb-4">Check your connection or browse all exercises</p>
+        
+        <div className="space-y-2">
+          <button 
+            onClick={() => navigate('/exercises')}
+            className="block mx-auto bg-lime-500 text-black px-4 py-2 rounded-lg hover:bg-lime-400 transition-colors text-sm font-medium"
+          >
+            Browse All Exercises
+          </button>
+          <button 
+            onClick={fetchRecommendedExercises}
+            className="block mx-auto text-lime-500 hover:text-lime-400 text-sm underline"
+          >
+            Retry Loading
+          </button>
+        </div>
+      </div>
+    )}
+    
+    {/* Browse All Exercises Link */}
+    <div className="mt-6 text-center">
+      <button
+        onClick={() => navigate('/exercises')}
+        className="text-lime-500 hover:text-lime-400 text-sm font-medium underline flex items-center justify-center"
+      >
+        Browse All Exercises
+        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </button>
+    </div>
+  </div>
+)}
       </div>
 
       {/* Enhanced chat input with user context */}

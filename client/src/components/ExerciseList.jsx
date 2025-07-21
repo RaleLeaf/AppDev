@@ -33,6 +33,18 @@ function ExerciseList() {
       .replace(/\s+/g, ' ')
       .trim();
   };
+  useEffect(() => {
+  // Auto-open exercise modal if coming from AI recommendations
+  const autoOpenExercise = location.state?.autoOpenExercise;
+  if (autoOpenExercise && exercises.length > 0) {
+    // Find the exercise in the loaded exercises or use the passed exercise directly
+    const exerciseToOpen = exercises.find(ex => ex.name === autoOpenExercise.name) || autoOpenExercise;
+    if (exerciseToOpen) {
+      setSelectedExercise(exerciseToOpen);
+      setShowInstructionsModal(true);
+    }
+  }
+}, [exercises, location.state?.autoOpenExercise]);
 
   // 🖼️ FIXED: Helper function that always uses placeholders for variety
   const getExerciseImage = (exercise) => {
