@@ -12,6 +12,7 @@ const EditProfile = () => {
   const { updateCurrentUser, loading, error } = useUser();
   const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200");
   const [userProfile, setUserProfile] = useState(null);
+  const [changedFields, setChangedFields] = useState(new Set()); // Track which fields have been changed
   
   const [userData, setUserData] = useState({
     name: "",
@@ -21,7 +22,7 @@ const EditProfile = () => {
     birthdate: "",
     height: "",
     weight: "",
-    fitnessGoal: "",
+    fitnessGoals: [], // Changed to array for multiple selections
     activityLevel: ""
   });
 
@@ -120,10 +121,20 @@ const EditProfile = () => {
       console.log('🔍 DEBUG - Fitness Goal Sources:', fitnessGoalSources);
       console.log('🔍 DEBUG - Activity Level Sources:', activityLevelSources);
       
-      const selectedFitnessGoal = user?.fitnessGoals?.[0] || backendUser.fitnessGoals?.[0] || profile.fitnessGoals?.[0] || user?.goals?.[0] || backendUser.goals?.[0] || profile.goals?.[0] || "Build muscle";
-      const selectedActivityLevel = user?.fitnessLevel || backendUser.fitnessLevel || profile.fitnessLevel || user?.activityLevel || backendUser.activityLevel || profile.activityLevel || "Beginner";
+      const selectedFitnessGoals = user?.fitnessGoals || backendUser.fitnessGoals || profile.fitnessGoals || user?.goals || backendUser.goals || profile.goals || [];
+      const selectedActivityLevel = user?.fitnessLevel || backendUser.fitnessLevel || profile.fitnessLevel || user?.activityLevel || backendUser.activityLevel || profile.activityLevel || "";
       
-      console.log('🔍 DEBUG - Selected Values:', { selectedFitnessGoal, selectedActivityLevel });
+      console.log('🔍 DEBUG - Selected Values:', { selectedFitnessGoals, selectedActivityLevel });
+      
+      // Convert activity level to proper case for display (handle case insensitivity)
+      const normalizeActivityLevel = (level) => {
+        if (!level) return "";
+        const levelLower = level.toLowerCase();
+        if (levelLower === "beginner") return "Beginner";
+        if (levelLower === "intermediate") return "Intermediate"; 
+        if (levelLower === "advanced") return "Advanced";
+        return level; // Return as-is if no match
+      };
       
       setUserData({
         name: user?.name || backendUser.name || user?.displayName || profile.displayName || profile.firstName || "",
@@ -134,8 +145,8 @@ const EditProfile = () => {
           (user?.dateOfBirth || backendUser.dateOfBirth || profile.dateOfBirth).split('T')[0] : "",
         height: user?.height || backendUser.height || profile.height || "",
         weight: user?.weight || backendUser.weight || profile.weight || "",
-        fitnessGoal: selectedFitnessGoal,
-        activityLevel: selectedActivityLevel
+        fitnessGoals: Array.isArray(selectedFitnessGoals) ? selectedFitnessGoals : [], // Allow empty/null values
+        activityLevel: normalizeActivityLevel(selectedActivityLevel)
       });
       
       if(user?.profilePicture || user?.profilePictureUrl || backendUser.profilePictureUrl || profile.profilePictureUrl) {
@@ -147,6 +158,31 @@ const EditProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData(prev => ({ ...prev, [name]: value }));
+    
+    // Track that this field has been changed
+    setChangedFields(prev => new Set(prev).add(name));
+  };
+
+  // Handle fitness goals checkbox changes
+  const handleFitnessGoalChange = (goal) => {
+    setUserData(prev => {
+      const currentGoals = prev.fitnessGoals || [];
+      const isSelected = currentGoals.includes(goal);
+      
+      let newGoals;
+      if (isSelected) {
+        // Remove goal if already selected
+        newGoals = currentGoals.filter(g => g !== goal);
+      } else {
+        // Add goal if not selected
+        newGoals = [...currentGoals, goal];
+      }
+      
+      return { ...prev, fitnessGoals: newGoals };
+    });
+    
+    // Track that this field has been changed
+    setChangedFields(prev => new Set(prev).add('fitnessGoals'));
   };
 
   const handleSubmit = async (e) => {
@@ -160,8 +196,8 @@ const EditProfile = () => {
         dateOfBirth: userData.birthdate,
         height: Number(userData.height),
         weight: Number(userData.weight),
-        goals: [userData.fitnessGoal],
-        fitnessLevel: userData.activityLevel
+        fitnessGoals: userData.fitnessGoals || [], // Backend expects 'fitnessGoals' as array
+        fitnessLevel: userData.activityLevel // This will be properly formatted from our normalize function
     };
 
     try {
@@ -228,7 +264,11 @@ const EditProfile = () => {
                 <input
                   type="text"
                   name="name"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('name') 
+                      ? 'border-lime-500 bg-zinc-900/30' 
+                      : 'border-zinc-800'
+                  }`}
                   value={userData.name}
                   onChange={handleChange}
                 />
@@ -239,7 +279,11 @@ const EditProfile = () => {
                 <input
                   type="text"
                   name="username"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('username') 
+                      ? 'border-lime-500 bg-zinc-900/30' 
+                      : 'border-zinc-800'
+                  }`}
                   value={userData.username}
                   onChange={handleChange}
                 />
@@ -250,7 +294,11 @@ const EditProfile = () => {
                 <input
                   type="email"
                   name="email"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('email') 
+                      ? 'border-lime-500 bg-zinc-900/30' 
+                      : 'border-zinc-800'
+                  }`}
                   value={userData.email}
                   onChange={handleChange}
                 />
@@ -261,7 +309,11 @@ const EditProfile = () => {
                 <input
                   type="tel"
                   name="phone"
-                  className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('phone') 
+                      ? 'border-lime-500 bg-zinc-900/30' 
+                      : 'border-zinc-800'
+                  }`}
                   value={userData.phone}
                   onChange={handleChange}
                 />
@@ -272,7 +324,11 @@ const EditProfile = () => {
                 <input
                   type="date"
                   name="birthdate"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full border rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('birthdate') 
+                      ? 'bg-zinc-800 border-lime-500 ring-1 ring-lime-500/50' 
+                      : 'bg-zinc-900 border-zinc-800'
+                  }`}
                   value={userData.birthdate}
                   onChange={handleChange}
                 />
@@ -289,7 +345,11 @@ const EditProfile = () => {
                   <input
                     type="number"
                     name="height"
-                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                      changedFields.has('height') 
+                        ? 'border-lime-500 bg-zinc-900/30' 
+                        : 'border-zinc-800'
+                    }`}
                     value={userData.height}
                     onChange={handleChange}
                   />
@@ -299,7 +359,11 @@ const EditProfile = () => {
                   <input
                     type="number"
                     name="weight"
-                    className="w-full bg-transparent border-b border-zinc-800 pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                    className={`w-full bg-transparent border-b pb-2 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                      changedFields.has('weight') 
+                        ? 'border-lime-500 bg-zinc-900/30' 
+                        : 'border-zinc-800'
+                    }`}
                     value={userData.weight}
                     onChange={handleChange}
                   />
@@ -307,29 +371,65 @@ const EditProfile = () => {
               </div>
 
               <div>
-                <label className="block text-zinc-400 text-xs mb-1">Fitness Goal</label>
-                <select
-                  name="fitnessGoal"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
-                  value={userData.fitnessGoal}
-                  onChange={handleChange}
-                >
-                  <option value="Lose weight">Lose weight</option>
-                  <option value="Build muscle">Build muscle</option>
-                  <option value="Improve endurance">Improve endurance</option>
-                  <option value="General fitness">General fitness</option>
-                  <option value="Athletic performance">Athletic performance</option>
-                </select>
+                <label className="block text-zinc-400 text-xs mb-3">Fitness Goals</label>
+                <div className={`space-y-3 p-3 border rounded-md transition-colors ${
+                  changedFields.has('fitnessGoals') 
+                    ? 'border-lime-500 bg-zinc-800/50 ring-1 ring-lime-500/50' 
+                    : 'border-zinc-800 bg-zinc-900/50'
+                }`}>
+                  {[
+                    'Lose weight',
+                    'Build muscle', 
+                    'Improve endurance',
+                    'General fitness',
+                    'Athletic performance'
+                  ].map((goal) => (
+                    <label key={goal} className="flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={userData.fitnessGoals?.includes(goal) || false}
+                        onChange={() => handleFitnessGoalChange(goal)}
+                        className="sr-only"
+                      />
+                      <div className={`w-5 h-5 border-2 rounded-md mr-3 flex items-center justify-center transition-colors ${
+                        userData.fitnessGoals?.includes(goal)
+                          ? 'bg-lime-500 border-lime-500'
+                          : 'border-zinc-600 group-hover:border-zinc-500'
+                      }`}>
+                        {userData.fitnessGoals?.includes(goal) && (
+                          <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className={`text-sm transition-colors ${
+                        userData.fitnessGoals?.includes(goal)
+                          ? 'text-lime-500 font-medium'
+                          : 'text-zinc-300 group-hover:text-white'
+                      }`}>
+                        {goal}
+                      </span>
+                    </label>
+                  ))}
+                  {userData.fitnessGoals?.length === 0 && (
+                    <p className="text-zinc-500 text-xs italic">Select your fitness goals (optional)</p>
+                  )}
+                </div>
               </div>
 
               <div>
                 <label className="block text-zinc-400 text-xs mb-1">Activity Level</label>
                 <select
                   name="activityLevel"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors"
+                  className={`w-full bg-zinc-900 border rounded-md py-2 px-3 text-white focus:outline-none focus:border-lime-500 transition-colors ${
+                    changedFields.has('activityLevel') 
+                      ? 'border-lime-500 bg-zinc-800 ring-1 ring-lime-500/50' 
+                      : 'border-zinc-800'
+                  }`}
                   value={userData.activityLevel}
                   onChange={handleChange}
                 >
+                  <option value="">Select your activity level</option>
                   <option value="Beginner">Beginner</option>
                   <option value="Intermediate">Intermediate</option>
                   <option value="Advanced">Advanced</option>
