@@ -20,8 +20,8 @@ import com.basick.app.dto.exercise.CreateExerciseRequest;
 import com.basick.app.dto.exercise.ExerciseDTO;
 import com.basick.app.dto.exercise.RateExerciseRequest;
 import com.basick.app.dto.exercise.UpdateExerciseRequest;
-import com.basick.app.service.ExerciseService;
 import com.basick.app.service.ExerciseDataImportService;
+import com.basick.app.service.ExerciseService;
 
 /**
  * REST controller for Exercise operations
