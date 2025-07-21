@@ -285,7 +285,7 @@ const UsersFeed = () => {
             user: {
               name: post.authorName || 'User',
               username: `@${post.authorName?.toLowerCase().replace(/\s+/g, '_') || 'user'}`,
-              avatar: post.authorProfilePicture || 'https://via.placeholder.com/200x200/374151/ffffff?text=U',
+              avatar: post.authorProfilePicture || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541',
               isVerified: false
             },
             timestamp: formatTimestamp(post.createdAt),
@@ -553,7 +553,7 @@ const UsersFeed = () => {
 
   const getCurrentUserAvatar = () => {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    return userData.profilePictureUrl || user?.profilePictureUrl || 'https://via.placeholder.com/200x200/374151/ffffff?text=U';
+    return userData.profilePictureUrl || user?.profilePictureUrl || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541';
   };
 
   // Enhanced onPost handler with better logging and proper timestamp
@@ -943,7 +943,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
     try {
       const authToken = localStorage.getItem('authToken') || user?.accessToken;
       if (!authToken) {
-        return { name: 'User', avatar: 'https://via.placeholder.com/28x28/374151/ffffff?text=U' };
+        return { name: 'User', avatar: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541' };
       }
 
       const response = await fetch(`http://localhost:8080/api/users/firebase/${userId}`, {
@@ -957,7 +957,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
         const userData = await response.json();
         const userInfo = {
           name: userData.name || userData.firstName || userData.displayName || 'User',
-          avatar: userData.profilePictureUrl || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'
+          avatar: userData.profilePictureUrl || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'
         };
         
         // Cache the result
@@ -969,7 +969,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
     }
 
     // Fallback
-    const fallbackInfo = { name: 'User', avatar: 'https://via.placeholder.com/28x28/374151/ffffff?text=U' };
+    const fallbackInfo = { name: 'User', avatar: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541' };
     setUserInfoCache(prev => ({ ...prev, [userId]: fallbackInfo }));
     return fallbackInfo;
   }, [user?.accessToken, userInfoCache]);
@@ -997,7 +997,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
           return {
             ...comment,
             userName: userName || 'User',
-            userAvatar: userAvatar || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'
+            userAvatar: userAvatar || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'
           };
         })
       );
@@ -1088,7 +1088,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
                 <div key={comment.id || index} className="flex items-start">
                   <div className="w-7 h-7 rounded-full overflow-hidden mr-2 flex-shrink-0">
                     <img
-                      src={comment.userAvatar || 'https://via.placeholder.com/28x28/374151/ffffff?text=U'}
+                      src={comment.userAvatar || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'}
                       alt={comment.userName || 'User'}
                       className="w-full h-full object-cover"
                     />
