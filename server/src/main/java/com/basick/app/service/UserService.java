@@ -79,6 +79,7 @@ public class UserService {
         
         // Save user and get the document ID
         String userDocumentId = userRepository.saveUser(user);
+        user.setUserId(userDocumentId); // Set the user's own document ID
         
         // Automatically create a corresponding UserProfile using the User document ID
         UserProfile userProfile = new UserProfile();
@@ -89,7 +90,17 @@ public class UserService {
         userProfile.setDisplayName(user.getName()); // Default display name to user name
         userProfile.setCreatedAt(Timestamp.now());
         userProfile.setUpdatedAt(Timestamp.now());
-        userProfileRepository.save(userProfile);
+        
+        // Save the profile and get its ID
+        String profileId = userProfileRepository.save(userProfile);
+        
+        // CRITICAL FIX: Set the userProfileId in the UserProfile object and update it
+        userProfile.setUserProfileId(profileId);
+        userProfileRepository.update(profileId, userProfile); // Update the profile with its own ID
+        
+        // Now, link the user to the profile by storing the profile's ID in the user document
+        user.setUserProfileId(profileId);
+        userRepository.updateUser(userDocumentId, user); // Update the user document with the profile ID
         
         return userMapper.toUserDTO(user);
     }

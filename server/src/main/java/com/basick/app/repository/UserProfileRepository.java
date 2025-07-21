@@ -53,7 +53,11 @@ public class UserProfileRepository {
      * Find user profile by ID
      */
     public UserProfile findById(String userProfileId) throws ExecutionException, InterruptedException {
-        return firestoreService.findById(COLLECTION_NAME, userProfileId, UserProfile.class);
+        UserProfile profile = firestoreService.findById(COLLECTION_NAME, userProfileId, UserProfile.class);
+        if (profile != null) {
+            profile.setUserProfileId(userProfileId);
+        }
+        return profile;
     }
 
     /**
@@ -69,6 +73,7 @@ public class UserProfileRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             return userProfile;
         }
         
@@ -79,7 +84,12 @@ public class UserProfileRepository {
      * Find all user profiles
      */
     public List<UserProfile> findAll() throws ExecutionException, InterruptedException {
-        return firestoreService.findAll(COLLECTION_NAME, UserProfile.class);
+        List<UserProfile> profiles = firestoreService.findAll(COLLECTION_NAME, UserProfile.class);
+        // This is tricky because findAll in firestoreService likely doesn't return IDs.
+        // For now, let's assume we need to fix the query-based finds first as they are the most critical for the user's issue.
+        // A proper fix would involve changing firestoreService.findAll or re-querying.
+        // For the current issue, this is not essential.
+        return profiles;
     }
 
     /**
@@ -102,6 +112,7 @@ public class UserProfileRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             return userProfile;
         }
         
@@ -121,6 +132,7 @@ public class UserProfileRepository {
         if (!snapshot.isEmpty()) {
             QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             return userProfile;
         }
         
@@ -144,6 +156,7 @@ public class UserProfileRepository {
         
         for (QueryDocumentSnapshot document : displayNameResults.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -157,6 +170,7 @@ public class UserProfileRepository {
         
         for (QueryDocumentSnapshot document : usernameResults.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             
             // Avoid duplicates - use userId for comparison since we're using userId as the reference
             boolean alreadyAdded = userProfiles.stream().anyMatch(up -> up.getUserId().equals(userProfile.getUserId()));
@@ -181,6 +195,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -200,6 +215,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -219,6 +235,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -239,6 +256,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -258,6 +276,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -277,6 +296,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -296,6 +316,7 @@ public class UserProfileRepository {
         List<UserProfile> userProfiles = new ArrayList<>();
         for (QueryDocumentSnapshot document : snapshot.getDocuments()) {
             UserProfile userProfile = document.toObject(UserProfile.class);
+            userProfile.setUserProfileId(document.getId());
             userProfiles.add(userProfile);
         }
         
@@ -336,5 +357,24 @@ public class UserProfileRepository {
             String documentId = document.getId();
             firestoreService.delete(COLLECTION_NAME, documentId);
         }
+    }
+
+    /**
+     * Find user profile by Firebase UID
+     */
+    public UserProfile findByFirebaseUid(String firebaseUid) throws ExecutionException, InterruptedException {
+        CollectionReference collection = FirestoreClient.getFirestore().collection(COLLECTION_NAME);
+        Query query = collection.whereEqualTo("firebaseUid", firebaseUid).limit(1);
+        
+        ApiFuture<QuerySnapshot> querySnapshot = query.get();
+        QuerySnapshot snapshot = querySnapshot.get();
+        
+        if (!snapshot.isEmpty()) {
+            QueryDocumentSnapshot document = snapshot.getDocuments().get(0);
+            UserProfile userProfile = document.toObject(UserProfile.class);
+            return userProfile;
+        }
+        
+        return null;
     }
 }

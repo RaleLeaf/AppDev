@@ -20,6 +20,7 @@ import com.basick.app.dto.exercise.CreateExerciseRequest;
 import com.basick.app.dto.exercise.ExerciseDTO;
 import com.basick.app.dto.exercise.RateExerciseRequest;
 import com.basick.app.dto.exercise.UpdateExerciseRequest;
+import com.basick.app.service.ExerciseDataImportService;
 import com.basick.app.service.ExerciseService;
 
 /**
@@ -31,9 +32,11 @@ public class ExerciseController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExerciseController.class);
     private final ExerciseService exerciseService;
+    private final ExerciseDataImportService exerciseDataImportService;
 
-    public ExerciseController(ExerciseService exerciseService) {
+    public ExerciseController(ExerciseService exerciseService, ExerciseDataImportService exerciseDataImportService) {
         this.exerciseService = exerciseService;
+        this.exerciseDataImportService = exerciseDataImportService;
     }
 
     /**
@@ -171,6 +174,36 @@ public class ExerciseController {
     }
 
     /**
+     * Import exercise data from CSV file
+     */
+    @PostMapping("/import")
+    public ResponseEntity<String> importExerciseData(@RequestParam String csvFilePath) {
+        try {
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import exercise data from the default CSV file
+     */
+    @PostMapping("/import/dataset")
+    public ResponseEntity<String> importDataset() {
+        try {
+            // Use the provided CSV file path
+            String csvFilePath = "c:\\Users\\User\\OneDrive\\Desktop\\Desktop\\AppDev\\client\\datas\\exercises.csv";
+            ExerciseDataImportService.ImportResult result = exerciseDataImportService.importExerciseDataFromCsv(csvFilePath);
+            return ResponseEntity.ok(result.getSummary());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Import failed: " + e.getMessage());
+        }
+    }
+
+    /**
      * 🏋️ UPDATED: Get exercises by workout category with environment filtering
      */
     @GetMapping("/workout-category/{category}")
@@ -180,14 +213,14 @@ public class ExerciseController {
             @RequestParam String difficulty,
             @RequestParam(defaultValue = "GYM") String environment) { // 🏋️ NEW: Add environment parameter
         try {
-            logger.info("Getting exercises for category: {}, difficulty: {}, environment: {}, limit: {}", 
+            logger.info("Getting exercises for category: {}, difficulty: {}, environment: {}, limit: {}",
                        category, difficulty, environment, limit);
             List<ExerciseDTO> exercises = exerciseService.getExercisesByWorkoutCategoryDifficultyAndEnvironment(
                 category, difficulty, environment, limit);
             logger.info("Found {} exercises", exercises.size());
             return ResponseEntity.ok(exercises);
         } catch (Exception e) {
-            logger.error("Error getting exercises for category {}, difficulty {}, environment {}: {}", 
+            logger.error("Error getting exercises for category {}, difficulty {}, environment {}: {}",
                         category, difficulty, environment, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
