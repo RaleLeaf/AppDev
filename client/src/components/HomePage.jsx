@@ -279,10 +279,6 @@ const HomePage = () => {
     { name: "Beginner", active: true },
     { name: "Intermediate", active: false },
     { name: "Advance", active: false },
-    { name: "HIIT", active: false },
-    { name: "Cardio", active: false },
-    { name: "Strength", active: false },
-    { name: "Mobility", active: false }
   ];
 
   return (

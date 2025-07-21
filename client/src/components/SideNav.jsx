@@ -9,7 +9,7 @@ const SideNav = () => {
 
   return (
     <div className="hidden md:flex md:flex-col md:w-64 md:border-r border-zinc-800 md:p-6">
-      <h1 className="text-2xl font-bold mb-10 kanit-medium">baSICK</h1>
+      <h1 className="text-2xl font-bold mb-10 kanit-medium">BaSIX</h1>
 
       <nav className="flex-1">
         <div className="space-y-2">

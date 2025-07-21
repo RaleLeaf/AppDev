@@ -98,7 +98,16 @@ export default function Notifications() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (!userId) return <div className="text-white text-center mt-10">Loading user...</div>;
+  if (!userId) {
+      return (
+        <div className="min-h-screen bg-black text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
+            <p>Loading Notifications...</p>
+          </div>
+        </div>
+      );
+    }
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -115,18 +124,7 @@ export default function Notifications() {
               >
                 New
               </button>
-              <button
-                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'events' ? 'bg-lime-500 text-black' : 'text-white'}`}
-                onClick={() => setActiveTab('events')}
-              >
-                Events
-              </button>
-              <button
-                className={`flex-1 py-2 rounded-full text-center text-sm kanit-regular ${activeTab === 'all' ? 'bg-lime-500 text-black' : 'text-white'}`}
-                onClick={() => setActiveTab('all')}
-              >
-                All
-              </button>
+          
             </div>
           </div>
 
