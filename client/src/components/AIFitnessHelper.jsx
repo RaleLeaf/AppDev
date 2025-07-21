@@ -17,24 +17,67 @@ export default function FitnessChat() {
   const useRealAI = !!apiKey;
   const selectedModel = 'gemini-1.5-flash';
   
-  // Enhanced user profile state with dynamic data
+  // ENHANCED: Comprehensive user profile state with all available fields
   const [userProfile, setUserProfile] = useState({
-    fitnessLevel: 'beginner',
-    goals: [],
-    preferences: [],
-    weight: null,
-    height: null,
+    // Basic Info
+    username: null,
+    displayName: null,
+    firstName: null,
+    lastName: null,
+    bio: null,
+    profilePictureUrl: null,
+    
+    // Demographics
     age: null,
     gender: null,
+    dateOfBirth: null,
+    location: null,
+    timezone: null,
+    
+    // Physical Stats
+    height: null,
+    weight: null,
     targetWeight: null,
+    bmi: null,
+    bmiCategory: null,
+    
+    // Fitness Profile
+    fitnessLevel: 'beginner',
+    fitnessGoals: [],
+    preferences: {},
+    
+    // Goals & Targets
     dailyCalorieGoal: null,
-    weeklyWorkoutGoal: null
+    weeklyWorkoutGoal: null,
+    
+    // Activity & Social
+    workoutsCompletedCount: null,
+    totalWorkoutMinutes: null,
+    streakDays: null,
+    longestStreak: null,
+    followersCount: null,
+    followingCount: null,
+    
+    // Achievement System
+    totalPoints: null,
+    currentRank: null,
+    achievements: [],
+    
+    // Privacy & Preferences
+    isProfilePublic: null,
+    shareWorkouts: null,
+    shareProgress: null,
+    
+    // Timestamps
+    lastActiveAt: null,
+    createdAt: null,
+    updatedAt: null
   });
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Fetch user profile data from backend
+  // ENHANCED: Fetch comprehensive user profile data from backend
   const fetchUserProfile = async () => {
     try {
       const authToken = localStorage.getItem('authToken') || 
@@ -43,9 +86,12 @@ export default function FitnessChat() {
                         user?.accessToken;
 
       if (!authToken || !user?.uid) {
+        console.warn('❌ No auth token or user UID available');
         setIsLoadingProfile(false);
         return;
       }
+
+      console.log('🔄 Fetching user profile for:', user.uid);
 
       // Try to get user profile by Firebase UID first
       const response = await fetch(`http://localhost:8080/api/user-profiles/by-firebase/${user.uid}`, {
@@ -57,30 +103,81 @@ export default function FitnessChat() {
 
       if (response.ok) {
         const profileData = await response.json();
+        console.log('📋 Raw profile data from backend:', profileData);
         
-        // Update user profile with fetched data
-        setUserProfile(prev => ({
-          ...prev,
+        // ENHANCED: Update user profile with ALL fetched data
+        setUserProfile({
+          // Basic Info
+          username: profileData.username || null,
+          displayName: profileData.displayName || null,
+          firstName: profileData.firstName || null,
+          lastName: profileData.lastName || null,
+          bio: profileData.bio || null,
+          profilePictureUrl: profileData.profilePictureUrl || null,
+          
+          // Demographics
+          age: profileData.age || null,
+          gender: profileData.gender || null,
+          dateOfBirth: profileData.dateOfBirth || null,
+          location: profileData.location || null,
+          timezone: profileData.timezone || null,
+          
+          // Physical Stats
+          height: profileData.height || null,
+          weight: profileData.weight || null,
+          targetWeight: profileData.targetWeight || null,
+          bmi: profileData.bmi || null,
+          bmiCategory: profileData.bmiCategory || null,
+          
+          // Fitness Profile
           fitnessLevel: (profileData.fitnessLevel || 'BEGINNER').toLowerCase(),
-          goals: profileData.fitnessGoals || [],
-          weight: profileData.weight,
-          height: profileData.height,
-          age: profileData.age,
-          gender: profileData.gender,
-          targetWeight: profileData.targetWeight,
-          dailyCalorieGoal: profileData.dailyCalorieGoal,
-          weeklyWorkoutGoal: profileData.weeklyWorkoutGoal,
-          preferences: profileData.preferences || []
-        }));
+          fitnessGoals: profileData.fitnessGoals || [],
+          preferences: profileData.preferences || {},
+          
+          // Goals & Targets
+          dailyCalorieGoal: profileData.dailyCalorieGoal || null,
+          weeklyWorkoutGoal: profileData.weeklyWorkoutGoal || null,
+          
+          // Activity & Social
+          workoutsCompletedCount: profileData.workoutsCompletedCount || 0,
+          totalWorkoutMinutes: profileData.totalWorkoutMinutes || 0,
+          streakDays: profileData.streakDays || 0,
+          longestStreak: profileData.longestStreak || 0,
+          followersCount: profileData.followersCount || 0,
+          followingCount: profileData.followingCount || 0,
+          
+          // Achievement System
+          totalPoints: profileData.totalPoints || 0,
+          currentRank: profileData.currentRank || 'BRONZE',
+          achievements: profileData.achievements || [],
+          
+          // Privacy & Preferences
+          isProfilePublic: profileData.isProfilePublic || false,
+          shareWorkouts: profileData.shareWorkouts || false,
+          shareProgress: profileData.shareProgress || false,
+          
+          // Timestamps
+          lastActiveAt: profileData.lastActiveAt || null,
+          createdAt: profileData.createdAt || null,
+          updatedAt: profileData.updatedAt || null
+        });
 
-        console.log('✅ User profile loaded:', {
+        console.log('✅ Comprehensive user profile loaded:', {
+          name: profileData.firstName || profileData.displayName || profileData.username,
           fitnessLevel: profileData.fitnessLevel,
           goals: profileData.fitnessGoals,
+          bmi: profileData.bmi,
+          bmiCategory: profileData.bmiCategory,
           age: profileData.age,
-          gender: profileData.gender
+          gender: profileData.gender,
+          workoutStreak: profileData.streakDays,
+          rank: profileData.currentRank,
+          completedWorkouts: profileData.workoutsCompletedCount
         });
       } else {
-        console.warn('❌ Failed to fetch user profile:', response.status);
+        console.warn('❌ Failed to fetch user profile:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
       }
     } catch (error) {
       console.error('💥 Error fetching user profile:', error);
@@ -94,6 +191,7 @@ export default function FitnessChat() {
     if (user?.uid) {
       fetchUserProfile();
     } else {
+      console.warn('⚠️ No user UID available');
       setIsLoadingProfile(false);
     }
   }, [user?.uid]);
@@ -165,7 +263,59 @@ export default function FitnessChat() {
     }).join('\n\n');
   };
 
-  // Enhanced Gemini AI Response function with dynamic user profile
+  // ENHANCED: Build comprehensive user context for AI
+  const buildUserContext = () => {
+    const profile = userProfile;
+    const displayName = profile.firstName || profile.displayName || profile.username || 'there';
+    
+    let context = `User Profile for ${displayName}:
+- Fitness Level: ${profile.fitnessLevel.toUpperCase()}`;
+
+    // Physical Stats
+    if (profile.age) context += `\n- Age: ${profile.age}`;
+    if (profile.gender) context += `\n- Gender: ${profile.gender}`;
+    if (profile.height) context += `\n- Height: ${profile.height}cm`;
+    if (profile.weight) context += `\n- Current Weight: ${profile.weight}kg`;
+    if (profile.targetWeight) context += `\n- Target Weight: ${profile.targetWeight}kg`;
+    if (profile.bmi) context += `\n- BMI: ${profile.bmi.toFixed(1)}`;
+    if (profile.bmiCategory) context += ` (${profile.bmiCategory})`;
+
+    // Goals & Targets
+    if (profile.fitnessGoals?.length > 0) {
+      context += `\n- Fitness Goals: ${profile.fitnessGoals.join(', ')}`;
+    }
+    if (profile.dailyCalorieGoal) context += `\n- Daily Calorie Goal: ${profile.dailyCalorieGoal}`;
+    if (profile.weeklyWorkoutGoal) context += `\n- Weekly Workout Goal: ${profile.weeklyWorkoutGoal} sessions`;
+
+    // Activity & Progress
+    if (profile.workoutsCompletedCount > 0) {
+      context += `\n- Workouts Completed: ${profile.workoutsCompletedCount}`;
+    }
+    if (profile.totalWorkoutMinutes > 0) {
+      context += `\n- Total Workout Minutes: ${profile.totalWorkoutMinutes}`;
+    }
+    if (profile.streakDays > 0) {
+      context += `\n- Current Streak: ${profile.streakDays} days`;
+    }
+    if (profile.longestStreak > 0) {
+      context += `\n- Longest Streak: ${profile.longestStreak} days`;
+    }
+
+    // Achievement System
+    if (profile.currentRank) {
+      context += `\n- Current Rank: ${profile.currentRank}`;
+    }
+    if (profile.totalPoints > 0) {
+      context += `\n- Total Points: ${profile.totalPoints}`;
+    }
+    if (profile.achievements?.length > 0) {
+      context += `\n- Recent Achievements: ${profile.achievements.slice(-3).join(', ')}`;
+    }
+
+    return context.trim();
+  };
+
+  // ENHANCED: Gemini AI Response function with comprehensive user context
   const getGeminiResponse = async (userMessage) => {
     try {
       if (!apiKey) {
@@ -227,19 +377,8 @@ export default function FitnessChat() {
         }
       }
 
-      // Build comprehensive user context
-      const userContextInfo = `
-User Profile Information:
-- Fitness Level: ${userProfile.fitnessLevel.toUpperCase()}
-- Goals: ${userProfile.goals.length > 0 ? userProfile.goals.join(', ') : 'General fitness'}
-${userProfile.age ? `- Age: ${userProfile.age}` : ''}
-${userProfile.gender ? `- Gender: ${userProfile.gender}` : ''}
-${userProfile.weight ? `- Current Weight: ${userProfile.weight}kg` : ''}
-${userProfile.height ? `- Height: ${userProfile.height}cm` : ''}
-${userProfile.targetWeight ? `- Target Weight: ${userProfile.targetWeight}kg` : ''}
-${userProfile.dailyCalorieGoal ? `- Daily Calorie Goal: ${userProfile.dailyCalorieGoal}` : ''}
-${userProfile.weeklyWorkoutGoal ? `- Weekly Workout Goal: ${userProfile.weeklyWorkoutGoal} sessions` : ''}
-      `.trim();
+      // ENHANCED: Build comprehensive user context
+      const userContextInfo = buildUserContext();
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${selectedModel}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -265,19 +404,23 @@ ${recentMessages ? `Recent Conversation Context:\n${recentMessages}\n` : ''}
 Current User Message: "${userMessage}"
 ${exerciseContext}
 
-Instructions:
-- Keep responses SHORT and concise (50-100 words max)
-- ${isFirstMessage ? 'Greet warmly but briefly, acknowledge their fitness level' : 'No greetings needed'}
+ENHANCED INSTRUCTIONS:
+- Keep responses SHORT and concise (50-150 words max)
+- ${isFirstMessage ? 'Greet warmly but briefly, acknowledge their fitness level and BMI if available' : 'No greetings needed'}
 - ALWAYS adapt advice to their ${userProfile.fitnessLevel.toUpperCase()} fitness level
+- Consider their BMI (${userProfile.bmi ? userProfile.bmi.toFixed(1) : 'not available'}) and category (${userProfile.bmiCategory || 'not available'})
+- Reference their workout history: ${userProfile.workoutsCompletedCount} completed workouts, ${userProfile.streakDays} day streak
+- Acknowledge their rank: ${userProfile.currentRank} with ${userProfile.totalPoints} points
 - If exercises are provided above, list them with numbers (1., 2., 3., etc.)
 - Use bullet points for tips
 - Include 1-2 relevant emojis only
 - Be direct and actionable
 - Focus on what they can do in THIS app only
 - For progress tracking, say "track here in the app" or "use our features"
-- Consider their goals: ${userProfile.goals.join(', ') || 'general fitness'}
-${userProfile.age ? `- Adapt advice for age ${userProfile.age}` : ''}
-${userProfile.gender ? `- Consider gender-specific advice for ${userProfile.gender}` : ''}
+- Consider their goals: ${userProfile.fitnessGoals?.join(', ') || 'general fitness'}
+- Age-appropriate advice for ${userProfile.age || 'unknown'} year old
+- Gender-specific considerations for ${userProfile.gender || 'user'}
+- Weight management advice: current ${userProfile.weight}kg, target ${userProfile.targetWeight}kg
 
 STRICTLY FORBIDDEN:
 - Do NOT recommend other fitness apps or external tools
@@ -292,7 +435,7 @@ Respond as TrainerAI:`
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 200,
+            maxOutputTokens: 250,
           }
         })
       });
@@ -322,14 +465,126 @@ Respond as TrainerAI:`
     }
   };
 
-  // Updated getPredefinedResponse with dynamic user profile
+  // ENHANCED: Updated getPredefinedResponse with comprehensive user profile
   const getPredefinedResponse = async (userMessage) => {
     const message = userMessage.toLowerCase();
     const isFirstMessage = messages.length === 0;
+    const profile = userProfile;
+    const displayName = profile.firstName || profile.displayName || profile.username || 'there';
     
+    // Enhanced welcome message with BMI and comprehensive profile
+    if (isFirstMessage) {
+      let welcomeMessage = `Welcome ${displayName}! 💪\n\n`;
+      
+      // Add fitness level and rank
+      welcomeMessage += `Level: ${profile.fitnessLevel.toUpperCase()}`;
+      if (profile.currentRank) welcomeMessage += ` • Rank: ${profile.currentRank}`;
+      
+      // Add BMI info if available
+      if (profile.bmi && profile.bmiCategory) {
+        welcomeMessage += `\n📊 BMI: ${profile.bmi.toFixed(1)} (${profile.bmiCategory})`;
+      }
+      
+      // Add streak info
+      if (profile.streakDays > 0) {
+        welcomeMessage += `\n🔥 Current streak: ${profile.streakDays} days`;
+      }
+      
+      // Add workout count
+      if (profile.workoutsCompletedCount > 0) {
+        welcomeMessage += `\n💪 Workouts completed: ${profile.workoutsCompletedCount}`;
+      }
+      
+      // Add goals
+      if (profile.fitnessGoals?.length > 0) {
+        welcomeMessage += `\n🎯 Goals: ${profile.fitnessGoals.join(', ')}`;
+      }
+      
+      // Add weight goal if applicable
+      if (profile.weight && profile.targetWeight) {
+        const weightDiff = profile.weight - profile.targetWeight;
+        if (Math.abs(weightDiff) > 1) {
+          welcomeMessage += `\n⚖️ Weight goal: ${profile.targetWeight}kg (${weightDiff > 0 ? `-${Math.abs(weightDiff).toFixed(1)}kg to go` : `+${Math.abs(weightDiff).toFixed(1)}kg to go`})`;
+        }
+      }
+      
+      welcomeMessage += `\n\n🏋️ Try: "back exercises", "triceps workout"\n🥗 Ask: "nutrition tips"\n🎯 Say: "motivation"\n\nWhat's your plan today?`;
+      
+      return welcomeMessage;
+    }
+
+    // Enhanced nutrition responses with BMI consideration
+    if (message.includes('diet') || message.includes('nutrition') || message.includes('food') || message.includes('eat')) {
+      let nutritionAdvice = "Nutrition guidance 🥗:\n";
+      
+      // BMI-based advice
+      if (profile.bmi && profile.bmiCategory) {
+        if (profile.bmiCategory === 'UNDERWEIGHT') {
+          nutritionAdvice += "• Focus on healthy weight gain\n• Add calorie-dense foods\n• Increase protein intake\n";
+        } else if (profile.bmiCategory === 'OVERWEIGHT' || profile.bmiCategory === 'OBESE') {
+          nutritionAdvice += "• Create moderate calorie deficit\n• Emphasize lean proteins\n• Increase vegetables/fiber\n";
+        } else {
+          nutritionAdvice += "• Maintain balanced nutrition\n• Lean proteins & complex carbs\n• Stay hydrated\n";
+        }
+      }
+      
+      // Goal-specific advice
+      if (profile.fitnessGoals?.includes('Build muscle') || profile.fitnessGoals?.includes('muscle_gain')) {
+        nutritionAdvice += "• Protein: 1.6-2.2g per kg body weight\n";
+      } else if (profile.fitnessGoals?.includes('Lose weight') || profile.fitnessGoals?.includes('weight_loss')) {
+        nutritionAdvice += "• Create 300-500 calorie deficit\n";
+      }
+      
+      // Calorie goal
+      if (profile.dailyCalorieGoal) {
+        nutritionAdvice += `• Your daily target: ${profile.dailyCalorieGoal} calories\n`;
+      }
+      
+      nutritionAdvice += "\n📊 Track nutrition here in the app!";
+      
+      return nutritionAdvice;
+    }
+    
+    // Enhanced motivation with comprehensive profile data
+    if (message.includes('motivated') || message.includes('goal') || message.includes('progress')) {
+      let motivationText = `You're crushing it, ${displayName}! 🌟\n\n`;
+      
+      // Current achievements
+      if (profile.streakDays > 0) {
+        motivationText += `🔥 ${profile.streakDays} day streak - amazing!\n`;
+      }
+      if (profile.workoutsCompletedCount > 0) {
+        motivationText += `💪 ${profile.workoutsCompletedCount} workouts completed\n`;
+      }
+      if (profile.currentRank && profile.totalPoints > 0) {
+        motivationText += `🏆 ${profile.currentRank} rank with ${profile.totalPoints} points\n`;
+      }
+      
+      // BMI progress
+      if (profile.bmi && profile.weight && profile.targetWeight) {
+        const weightDiff = Math.abs(profile.weight - profile.targetWeight);
+        if (weightDiff <= 5) {
+          motivationText += `⚖️ So close to your weight goal!\n`;
+        }
+      }
+      
+      // Goals reminder
+      if (profile.fitnessGoals?.length > 0) {
+        motivationText += `\n🎯 Your goals: ${profile.fitnessGoals.join(', ')}\n`;
+      }
+      
+      if (profile.weeklyWorkoutGoal) {
+        motivationText += `📅 Weekly target: ${profile.weeklyWorkoutGoal} workouts\n`;
+      }
+      
+      motivationText += "\n• Track progress here in the app\n• Celebrate every small win\n• You're stronger than yesterday! 💪";
+      
+      return motivationText;
+    }
+
     // Enhanced workout responses with user's fitness level
     if (message.includes('workout') || message.includes('exercise')) {
-      let filters = { difficulty: userProfile.fitnessLevel.toUpperCase() };
+      let filters = { difficulty: profile.fitnessLevel.toUpperCase() };
       
       // Map user terms to actual database muscle groups
       if (message.includes('chest') || message.includes('push')) {
@@ -367,9 +622,26 @@ Respond as TrainerAI:`
         if (exercises.length > 0) {
           const formattedExercises = formatExercisesForResponse(exercises);
           
-          return `${isFirstMessage ? `Welcome! 👋 I see you're at ${userProfile.fitnessLevel} level. ` : ''}Here are ${userProfile.fitnessLevel} exercises${userProfile.goals.length > 0 ? ` for your goals (${userProfile.goals.join(', ')})` : ''}:\n\n${formattedExercises}\n\n💪 ${userProfile.fitnessLevel === 'advanced' ? 'Push your limits with proper form!' : userProfile.fitnessLevel === 'intermediate' ? 'Focus on progressive overload!' : 'Start with proper form!'}`;
+          let responseText = `Here are ${profile.fitnessLevel} exercises`;
+          if (profile.fitnessGoals?.length > 0) {
+            responseText += ` for your goals (${profile.fitnessGoals.join(', ')})`;
+          }
+          responseText += `:\n\n${formattedExercises}\n\n💪 `;
+          
+          // BMI-based advice
+          if (profile.bmiCategory === 'OVERWEIGHT' || profile.bmiCategory === 'OBESE') {
+            responseText += 'Combine with cardio for best results!';
+          } else if (profile.bmiCategory === 'UNDERWEIGHT') {
+            responseText += 'Focus on strength training to build muscle!';
+          } else {
+            responseText += profile.fitnessLevel === 'advanced' ? 'Push your limits with proper form!' : 
+                           profile.fitnessLevel === 'intermediate' ? 'Focus on progressive overload!' : 
+                           'Master the movement first!';
+          }
+          
+          return responseText;
         } else {
-          return `No ${userProfile.fitnessLevel} exercises found. Try:\n\n• Different muscle groups\n• Check login status\n\nAvailable: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts 💪`;
+          return `No ${profile.fitnessLevel} exercises found. Try:\n\n• Different muscle groups\n• Check login status\n\nAvailable: Upper Back, Triceps, Biceps, Abs, Quads, Glutes, Delts 💪`;
         }
       } catch (error) {
         console.error('Error in workout response:', error);
@@ -410,18 +682,27 @@ Respond as TrainerAI:`
         try {
           const exercises = await fetchExercisesFromAPI({ 
             muscleGroup: dbMuscleGroup,
-            difficulty: userProfile.fitnessLevel.toUpperCase() 
+            difficulty: profile.fitnessLevel.toUpperCase() 
           });
           
           if (exercises.length > 0) {
             const formattedExercises = formatExercisesForResponse(exercises);
-            const levelAdvice = userProfile.fitnessLevel === 'advanced' ? 'Challenge yourself with perfect form!' : 
-                               userProfile.fitnessLevel === 'intermediate' ? 'Focus on mind-muscle connection!' : 
-                               'Master the movement first!';
+            let levelAdvice = '';
             
-            return `${isFirstMessage ? `Welcome! 👋 Perfect for ${userProfile.fitnessLevel} level. ` : ''}${userTerm.toUpperCase()} exercises:\n\n${formattedExercises}\n\n🎯 ${levelAdvice}`;
+            // BMI-based advice
+            if (profile.bmiCategory === 'OVERWEIGHT' || profile.bmiCategory === 'OBESE') {
+              levelAdvice = 'Combine with cardio for weight loss!';
+            } else if (profile.bmiCategory === 'UNDERWEIGHT') {
+              levelAdvice = 'Focus on building muscle mass!';
+            } else {
+              levelAdvice = profile.fitnessLevel === 'advanced' ? 'Challenge yourself with perfect form!' : 
+                           profile.fitnessLevel === 'intermediate' ? 'Focus on mind-muscle connection!' : 
+                           'Master the movement first!';
+            }
+            
+            return `${userTerm.toUpperCase()} exercises for ${profile.fitnessLevel} level:\n\n${formattedExercises}\n\n🎯 ${levelAdvice}`;
           } else {
-            return `No ${userTerm} exercises for ${userProfile.fitnessLevel} level found.\n\n• Try different fitness level\n• Check other muscle groups\n• Verify login status 💪`;
+            return `No ${userTerm} exercises for ${profile.fitnessLevel} level found.\n\n• Try different fitness level\n• Check other muscle groups\n• Verify login status 💪`;
           }
         } catch (error) {
           console.error('Error fetching muscle group exercises:', error);
@@ -430,50 +711,21 @@ Respond as TrainerAI:`
       }
     }
     
-    // Enhanced nutrition responses based on user goals and stats
-    if (message.includes('diet') || message.includes('nutrition') || message.includes('food') || message.includes('eat')) {
-      let nutritionAdvice = "Nutrition basics 🥗:\n• Lean proteins\n• Complex carbs\n• Healthy fats\n• Lots of vegetables\n\n";
-      
-      if (userProfile.goals.includes('Build muscle') || userProfile.goals.includes('muscle_gain')) {
-        nutritionAdvice += "For muscle building: 1.6-2.2g protein per kg body weight";
-      } else if (userProfile.goals.includes('Lose weight') || userProfile.goals.includes('weight_loss')) {
-        nutritionAdvice += "For weight loss: Create 300-500 calorie deficit";
-      } else if (userProfile.dailyCalorieGoal) {
-        nutritionAdvice += `Your goal: ${userProfile.dailyCalorieGoal} calories/day`;
-      }
-      
-      if (userProfile.targetWeight && userProfile.weight) {
-        const weightDiff = userProfile.weight - userProfile.targetWeight;
-        nutritionAdvice += weightDiff > 0 ? "\n🎯 Focus on lean proteins & portion control" : "\n🎯 Add healthy calorie-dense foods";
-      }
-      
-      return nutritionAdvice;
-    }
-    
-    // Enhanced motivation with personal goals
-    if (message.includes('motivated') || message.includes('goal') || message.includes('progress')) {
-      let motivationText = `You're doing great as a ${userProfile.fitnessLevel}! 🌟\n\n`;
-      
-      if (userProfile.goals.length > 0) {
-        motivationText += `Your goals: ${userProfile.goals.join(', ')}\n`;
-      }
-      
-      if (userProfile.weeklyWorkoutGoal) {
-        motivationText += `Weekly target: ${userProfile.weeklyWorkoutGoal} workouts\n`;
-      }
-      
-      motivationText += "\n• Track progress here in the app\n• Celebrate small wins\n• Consistency beats perfection! 💪";
-      
-      return motivationText;
-    }
-    
     // Enhanced beginner welcome with user's actual level
     if (message.includes('beginner') || message.includes('start') || message.includes('new')) {
-      const currentLevel = userProfile.fitnessLevel;
+      const currentLevel = profile.fitnessLevel;
       let response = "";
       
       if (currentLevel === 'beginner') {
-        response = "Perfect! You're at beginner level 🎉\n\nFocus on:\n• Learning proper form\n• Building consistency\n• 2-3 workouts/week\n• Progressive overload\n\nReady to start?";
+        response = "Perfect! You're at beginner level 🎉\n\nFocus on:\n• Learning proper form\n• Building consistency\n• 2-3 workouts/week\n• Progressive overload\n\n";
+        
+        if (profile.bmiCategory === 'OVERWEIGHT' || profile.bmiCategory === 'OBESE') {
+          response += "💡 Add cardio for weight management";
+        } else if (profile.bmiCategory === 'UNDERWEIGHT') {
+          response += "💡 Focus on strength training first";
+        } else {
+          response += "Ready to start?";
+        }
       } else if (currentLevel === 'intermediate') {
         response = "I see you're intermediate level! 💪\n\n• Vary your routines\n• Focus on progressive overload\n• 3-4 workouts/week\n• Track your lifts\n\nWhat muscle group today?";
       } else if (currentLevel === 'advanced') {
@@ -487,35 +739,24 @@ Respond as TrainerAI:`
     if (message.includes('rest') || message.includes('recovery') || message.includes('sleep')) {
       let recoveryAdvice = "Recovery essentials ✨:\n• 7-9 hours sleep\n• Stay hydrated\n";
       
-      if (userProfile.fitnessLevel === 'advanced') {
+      if (profile.fitnessLevel === 'advanced') {
         recoveryAdvice += "• 48-72hrs rest between intense sessions\n• Consider deload weeks\n• Monitor overtraining";
-      } else if (userProfile.fitnessLevel === 'intermediate') {
+      } else if (profile.fitnessLevel === 'intermediate') {
         recoveryAdvice += "• 48hrs rest between training same muscles\n• Active recovery days\n• Listen to your body";
       } else {
         recoveryAdvice += "• Rest 48hrs between full body workouts\n• Light walks on off days\n• Don't train if sore";
       }
       
+      // Age-based recovery advice
+      if (profile.age > 40) {
+        recoveryAdvice += "\n• Extra attention to warm-up\n• Consider longer rest periods";
+      }
+      
       return recoveryAdvice + "\n\nMuscles grow during rest! 💪";
     }
     
-    // Enhanced fallback response with user's profile info
-    if (isFirstMessage) {
-      let welcomeMessage = `Welcome to your AI trainer! 💪\n\nI see you're at ${userProfile.fitnessLevel.toUpperCase()} level`;
-      
-      if (userProfile.goals.length > 0) {
-        welcomeMessage += ` with goals: ${userProfile.goals.join(', ')}`;
-      }
-      
-      if (userProfile.weeklyWorkoutGoal) {
-        welcomeMessage += `\nWeekly target: ${userProfile.weeklyWorkoutGoal} workouts`;
-      }
-      
-      welcomeMessage += `\n\n🏋️ Try: "back exercises", "triceps workout"\n🥗 Ask: "nutrition tips"\n🎯 Say: "motivation"\n\nWhat's your plan today?`;
-      
-      return welcomeMessage;
-    } else {
-      return `I'm here to help your ${userProfile.fitnessLevel} journey! 💪\n\n🏋️ Exercises: "back workout", "triceps"\n🥗 Nutrition: "meal tips"\n🎯 Goals: "motivation"\n\nWhat do you need?`;
-    }
+    // Enhanced fallback response with comprehensive user info
+    return `I'm here to help your ${profile.fitnessLevel} journey, ${displayName}! 💪\n\n🏋️ Exercises: "back workout", "triceps"\n🥗 Nutrition: "meal tips"\n🎯 Goals: "motivation"\n\nWhat do you need?`;
   };
 
   // Handle sending messages
@@ -595,7 +836,7 @@ Respond as TrainerAI:`
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-white px-4 pt-4 pb-16 font-sans flex flex-col">
-      {/* Enhanced Header with fitness level indicator */}
+      {/* ENHANCED Header with comprehensive user info */}
       <div className="p-5 flex items-center sticky top-0 z-10 bg-[#1a1a1a]">
         <button 
           className="p-2 hover:bg-zinc-800 rounded-full transition-colors" 
@@ -614,14 +855,19 @@ Respond as TrainerAI:`
               </span>
             )}
           </h1>
-          <p className="text-xs text-lime-500 mt-1 capitalize">
-            {userProfile.fitnessLevel} Level
-            {userProfile.goals.length > 0 && ` • ${userProfile.goals[0]}`}
-          </p>
+          <div className="text-xs text-lime-500 mt-1 capitalize flex items-center justify-center gap-2">
+            <span>{userProfile.fitnessLevel} Level</span>
+            {/* Show BMI category if user is underweight or overweight, otherwise show rank */}
+            {userProfile.bmiCategory && (userProfile.bmiCategory === 'UNDERWEIGHT' || userProfile.bmiCategory === 'OVERWEIGHT' || userProfile.bmiCategory === 'OBESE') 
+              ? <span>• {userProfile.bmiCategory}</span>
+              : userProfile.currentRank && <span>• {userProfile.currentRank} Rank</span>
+            }
+            {userProfile.bmi && <span>• BMI: {userProfile.bmi.toFixed(1)}</span>}
+            {userProfile.streakDays > 0 && <span>• 🔥{userProfile.streakDays}d streak</span>}
+          </div>
         </div>
       </div>
 
-      {/* Rest of your component remains the same... */}
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto pb-20 max-w-3xl mx-auto w-full px-4">
         <div className="space-y-4">
@@ -701,21 +947,21 @@ Respond as TrainerAI:`
             </div>
             <p className={`text-xs ${apiKey ? 'text-green-300' : 'text-yellow-300'}`}>
               {apiKey 
-                ? `Customized for ${userProfile.fitnessLevel} level with access to your exercise database. Goals: ${userProfile.goals.join(', ') || 'General fitness'}`
+                ? `Customized for ${userProfile.fitnessLevel} level with BMI ${userProfile.bmi ? userProfile.bmi.toFixed(1) : 'unknown'}. Goals: ${userProfile.fitnessGoals?.join(', ') || 'General fitness'}`
                 : `Built-in responses tailored for ${userProfile.fitnessLevel} level. Add Gemini AI key for enhanced personalization!`
               }
             </p>
           </div>
         </div>
 
-        {/* Rest of your workout programs section... */}
+        {/* Enhanced Workout Programs based on user level */}
         {messages.length === 0 && (
           <div className="mt-8 mb-4">
             <h3 className="text-lg font-semibold mb-4 text-lime-500">
               Recommended for {userProfile.fitnessLevel.charAt(0).toUpperCase() + userProfile.fitnessLevel.slice(1)}
+              {userProfile.bmiCategory && ` • ${userProfile.bmiCategory}`}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Your existing program cards... */}
               <div className="relative bg-white/5 border border-purple-500 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform cursor-pointer">
                 <img
                   src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1"
@@ -732,11 +978,11 @@ Respond as TrainerAI:`
                     {userProfile.fitnessLevel === 'beginner' ? '06 Workouts · for Beginner' : 
                      userProfile.fitnessLevel === 'intermediate' ? '08 Workouts · for Intermediate' : 
                      '10 Workouts · for Advanced'}
+                    {userProfile.bmiCategory === 'OVERWEIGHT' && ' · Includes Cardio'}
                   </div>
                 </div>
               </div>
 
-              {/* More program cards... */}
               <div className="relative bg-white/5 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform cursor-pointer">
                 <img
                   src="https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
@@ -744,8 +990,12 @@ Respond as TrainerAI:`
                   className="w-full h-40 md:h-48 object-cover"
                 />
                 <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent">
-                  <div className="text-white font-semibold text-sm md:text-base">Wake Up Call</div>
-                  <div className="text-lime-500 text-xs mt-1">04 Workouts · for 2× – 3× a Week</div>
+                  <div className="text-white font-semibold text-sm md:text-base">
+                    {userProfile.bmiCategory === 'UNDERWEIGHT' ? 'Mass Builder' : 'Wake Up Call'}
+                  </div>
+                  <div className="text-lime-500 text-xs mt-1">
+                    04 Workouts · for {userProfile.weeklyWorkoutGoal ? `${userProfile.weeklyWorkoutGoal}× a Week` : '2× – 3× a Week'}
+                  </div>
                 </div>
               </div>
             </div>

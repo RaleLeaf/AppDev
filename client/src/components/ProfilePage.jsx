@@ -16,23 +16,17 @@ const ProfilePage = () => {
     email: '',
     profilePictureUrl: "",
     joinedDate: '',
-    bio: ''
+    bio: '',
+    // Profile data
+    height: null,
+    weight: null,
+    bmi: null,
+    bmiCategory: '',
+    dateOfBirth: '',
+    age: null,
+    fitnessLevel: '',
+    fitnessGoals: []
   });
-
-  // Generate Facebook-style placeholder image with person silhouette
-  const getPlaceholderImage = () => {
-    // Using a data URL for an SVG person silhouette similar to Facebook's default
-    return "data:image/svg+xml;base64," + btoa(`
-      <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="200" fill="#3a3a3a"/>
-        <g fill="#6b7280">
-          <!-- Person silhouette -->
-          <circle cx="100" cy="75" r="25"/>
-          <path d="M100 110 C85 110, 70 120, 70 140 L70 160 L130 160 L130 140 C130 120, 115 110, 100 110 Z"/>
-        </g>
-      </svg>
-    `);
-  };
 
   // Load user data on component mount
   useEffect(() => {
@@ -81,7 +75,7 @@ const ProfilePage = () => {
     };
 
     loadUserData();
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Format join date
   const formatJoinDate = (dateString) => {
@@ -100,7 +94,7 @@ const ProfilePage = () => {
         const years = Math.floor(diffDays / 365);
         return `Joined ${years} year${years > 1 ? 's' : ''} ago`;
       }
-    } catch (error) {
+    } catch {
       return 'Member since recently';
     }
   };
@@ -111,11 +105,18 @@ const ProfilePage = () => {
       const firebaseUid = localStorage.getItem('firebaseUid') || user?.uid || user?.firebaseUid;
       const authToken = localStorage.getItem('authToken') || user?.accessToken;
       
+      console.log('🔍 Debug - Auth data check:');
+      console.log('firebaseUid:', firebaseUid);
+      console.log('authToken:', authToken ? 'EXISTS' : 'MISSING');
+      console.log('user object:', user);
+      
       if (!firebaseUid || !authToken) {
-        console.log('No auth data available for API call');
+        console.log('❌ No auth data available for API call');
         return;
       }
 
+      console.log('📡 Fetching user data from:', `http://localhost:8080/api/users/firebase/${firebaseUid}`);
+      
       // Fetch user data from your server
       const userResponse = await fetch(`http://localhost:8080/api/users/firebase/${firebaseUid}`, {
         headers: {
@@ -124,9 +125,14 @@ const ProfilePage = () => {
         },
       });
 
+      console.log('👤 User response status:', userResponse.status, userResponse.statusText);
+
       if (userResponse.ok) {
         const apiUserData = await userResponse.json();
-        console.log('User data from API:', apiUserData);
+        console.log('✅ User data from API:', apiUserData);
+        console.log('📋 User data keys:', Object.keys(apiUserData));
+        console.log('🆔 User ID from API:', apiUserData.id);
+        console.log('🔥 Firebase UID:', firebaseUid);
         
         // Update user data with API response
         setUserData(prev => ({
@@ -137,27 +143,63 @@ const ProfilePage = () => {
         }));
 
         // Try to fetch user profile data for additional info
+        // Use user ID if available, otherwise use Firebase UID
+        const profileEndpoint = apiUserData.id 
+          ? `http://localhost:8080/api/user-profiles/by-user/${apiUserData.id}`
+          : `http://localhost:8080/api/user-profiles/by-firebase/${firebaseUid}`;
+        
+        console.log('📡 Fetching profile data from:', profileEndpoint);
+
         try {
-          const profileResponse = await fetch(`http://localhost:8080/api/userprofiles/user/${apiUserData.id}`, {
+          const profileResponse = await fetch(profileEndpoint, {
             headers: {
               'Authorization': `Bearer ${authToken}`,
               'Content-Type': 'application/json',
             },
           });
 
+          console.log('🏃‍♂️ Profile response status:', profileResponse.status, profileResponse.statusText);
+
           if (profileResponse.ok) {
             const profileData = await profileResponse.json();
-            console.log('Profile data from API:', profileData);
+            console.log('✅ Profile data from API:', profileData);
+            console.log('📋 Profile data keys:', Object.keys(profileData));
+            console.log('📊 BMI:', profileData.bmi);
+            console.log('📏 Height:', profileData.height);
+            console.log('⚖️ Weight:', profileData.weight);
+            console.log('🎂 Age:', profileData.age);
+            console.log('📅 Date of Birth:', profileData.dateOfBirth);
+            console.log('💪 Fitness Level:', profileData.fitnessLevel);
+            console.log('🎯 Fitness Goals:', profileData.fitnessGoals);
             
             setUserData(prev => ({
               ...prev,
               displayName: profileData.displayName || prev.displayName,
               bio: profileData.bio || prev.bio,
-              profilePictureUrl: profileData.profilePictureUrl || ""
+              profilePictureUrl: profileData.profilePictureUrl || "",
+              // Add profile specific data
+              height: profileData.height,
+              weight: profileData.weight,
+              bmi: profileData.bmi,
+              bmiCategory: profileData.bmiCategory,
+              dateOfBirth: profileData.dateOfBirth,
+              age: profileData.age,
+              fitnessLevel: profileData.fitnessLevel,
+              fitnessGoals: profileData.fitnessGoals || []
             }));
+          } else {
+            console.log('❌ Profile response not OK:', profileResponse.status, profileResponse.statusText);
+            
+            // Try to get response text for more details
+            try {
+              const errorText = await profileResponse.text();
+              console.log('❌ Profile error details:', errorText);
+            } catch {
+              console.log('❌ Could not read profile error response');
+            }
           }
         } catch (profileError) {
-          console.log('Profile data not found or error:', profileError);
+          console.log('❌ Profile data fetch error:', profileError);
         }
 
         // Store updated data in localStorage
@@ -165,9 +207,19 @@ const ProfilePage = () => {
           ...apiUserData,
           ...userData
         }));
+      } else {
+        console.log('❌ User response not OK:', userResponse.status, userResponse.statusText);
+        
+        // Try to get response text for more details
+        try {
+          const errorText = await userResponse.text();
+          console.log('❌ User error details:', errorText);
+        } catch {
+          console.log('❌ Could not read user error response');
+        }
       }
     } catch (error) {
-      console.error('Error fetching user data from API:', error);
+      console.error('❌ Error fetching user data from API:', error);
     }
   };
 
@@ -284,6 +336,100 @@ const ProfilePage = () => {
                 <p className="text-gray-500 text-xs mt-1">
                   {userData.email}
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Profile Details Section */}
+          <div className="px-5 mb-6">
+            {/* Health & Fitness Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl mx-auto">
+              {/* BMI Section */}
+              {userData.bmi && (
+                <div className="bg-zinc-900 rounded-lg p-3 border border-zinc-800">
+                  <h3 className="font-semibold text-white mb-2 kanit-medium">Health Metrics</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                      <p className="text-xl font-bold text-lime-500 kanit-semibold">{parseFloat(userData.bmi).toFixed(2)}</p>
+                      <p className="text-xs text-gray-400">BMI</p>
+                    </div>
+                    <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                      <p className="text-sm font-medium text-white capitalize kanit-medium">{userData.bmiCategory?.toLowerCase()}</p>
+                      <p className="text-xs text-gray-400">Category</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Physical Stats */}
+              {(userData.height || userData.weight) && (
+                <div className="bg-zinc-900 rounded-lg p-3 border border-zinc-800">
+                  <h3 className="font-semibold text-white mb-2 kanit-medium">Physical Stats</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {userData.height && (
+                      <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-green-500 kanit-semibold">{parseFloat(userData.height).toFixed(2)} cm</p>
+                        <p className="text-xs text-gray-400">Height</p>
+                      </div>
+                    )}
+                    {userData.weight && (
+                      <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-purple-500 kanit-semibold">{parseFloat(userData.weight).toFixed(2)} kg</p>
+                        <p className="text-xs text-gray-400">Weight</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Personal Info */}
+              {(userData.age || userData.dateOfBirth) && (
+                <div className="bg-zinc-900 rounded-lg p-3 border border-zinc-800">
+                  <h3 className="font-semibold text-white mb-2 kanit-medium">Personal Info</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {userData.age && (
+                      <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-orange-500 kanit-semibold">{userData.age}</p>
+                        <p className="text-xs text-gray-400">Age</p>
+                      </div>
+                    )}
+                    {userData.dateOfBirth && (
+                      <div className="text-center bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-sm font-medium text-white kanit-medium">
+                          {new Date(userData.dateOfBirth).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-gray-400">Birthday</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Fitness Info */}
+              {(userData.fitnessLevel || (userData.fitnessGoals && userData.fitnessGoals.length > 0)) && (
+                <div className="bg-zinc-900 rounded-lg p-3 border border-zinc-800">
+                  <h3 className="font-semibold text-white mb-2 kanit-medium">Fitness Profile</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {userData.fitnessLevel && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Fitness Level</p>
+                        <p className="font-medium text-white capitalize kanit-medium">{userData.fitnessLevel.toLowerCase()}</p>
+                      </div>
+                    )}
+                    {userData.fitnessGoals && userData.fitnessGoals.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Fitness Goals</p>
+                        <div className="flex flex-wrap gap-1">
+                          {userData.fitnessGoals.map((goal, index) => (
+                            <span key={index} className="bg-lime-500/20 text-lime-400 text-xs px-2 py-1 rounded-full kanit-regular">
+                              {goal}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>

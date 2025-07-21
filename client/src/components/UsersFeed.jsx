@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from './BottonNav';
 import SideNav from './SideNav';
@@ -16,7 +16,10 @@ const UsersFeed = () => {
   const [shareModalPost, setShareModalPost] = useState(null);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [userName, setUserName] = useState('User');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   // Enhanced feed data with more details
   const [posts, setPosts] = useState([]);
@@ -193,119 +196,173 @@ const UsersFeed = () => {
     getUserName();
   }, [user, isAuthenticated]);
 
-  // Fetch posts from backend
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        const authToken = localStorage.getItem('authToken') || user?.accessToken;
-        
-        if (!authToken) {
-          console.log('No auth token, using default posts');
-          setPosts([
-            {
-              id: 1,
-              user: {
-                name: 'SARAH WEGAN',
-                username: '@sarah_wegan96',
-                avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200',
-                isVerified: true
-              },
-              timestamp: '2h ago',
-              content: 'Starting my day right with a quick 20-minute HIIT session! Feeling energized and ready to crush the day. #MorningWorkout #BaSickRoutine',
-              image: 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=1000',
-              likes: 19,
-              comments: 3,
-              shares: 2,
-              hasLiked: false,
-              tags: ['HIIT', 'Morning']
+  // Fetch posts from backend with pagination
+  const fetchPosts = useCallback(async (pageNum = 0, isLoadMore = false) => {
+    try {
+      if (!isLoadMore) setLoading(true);
+      else setLoadingMore(true);
+      
+      const authToken = localStorage.getItem('authToken') || user?.accessToken;
+      
+      if (!authToken) {
+        console.log('No auth token, using default posts');
+        const defaultPosts = [
+          {
+            id: 1,
+            user: {
+              name: 'SARAH WEGAN',
+              username: '@sarah_wegan96',
+              avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200',
+              isVerified: true
             },
-            {
-              id: 2,
-              user: {
-                name: 'John Welkin',
-                username: '@jwelkin31',
-                avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=200',
-                isVerified: false
-              },
-              timestamp: '5h ago',
-              content: 'Just set a new PR!!! 225lb bench for 5 reps, been working towards this for months. Hard work and consistency really do pay off! Thanks to the baSICK app for helping me track my progress.',
-              image: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=1000',
-              likes: 8,
-              comments: 1,
-              shares: 0,
-              hasLiked: true,
-              tags: ['PR', 'Strength']
-            }
-          ]);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch posts from API
-        const response = await fetch('http://localhost:8080/api/posts', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
+            timestamp: '2h ago',
+            content: 'Starting my day right with a quick 20-minute HIIT session! Feeling energized and ready to crush the day. #MorningWorkout #BaSickRoutine',
+            image: 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=1000',
+            likes: 19,
+            comments: 3,
+            shares: 2,
+            hasLiked: false,
+            tags: ['HIIT', 'Morning'],
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
           },
-        });
-
-        if (response.ok) {
-          const apiPosts = await response.json();
-          console.log('Fetched posts from API:', apiPosts);
-          
-          // Transform API posts to match UI format and fetch like/comment counts
-          const transformedPosts = await Promise.all(apiPosts.map(async (post) => {
-            console.log('Processing post:', post.id, 'with tags:', post.tags);
-            
-            // Get like and comment counts
-            const [likeCount, commentCount, hasLiked] = await Promise.all([
-              likeAPI.getLikeCount(post.id).catch(() => 0),
-              commentAPI.getCommentCount(post.id).catch(() => 0),
-              likeAPI.hasUserLikedPost(user?.uid || localStorage.getItem('firebaseUid'), post.id).catch(() => false)
-            ]);
-            
-            return {
-              id: post.id,
-              user: {
-                name: post.authorName || 'User',
-                username: `@${post.authorName?.toLowerCase().replace(/\s+/g, '_') || 'user'}`,
-                avatar: post.authorProfilePicture || 'https://via.placeholder.com/200x200/374151/ffffff?text=U',
-                isVerified: false
-              },
-              timestamp: formatTimestamp(post.createdAt),
-              content: post.content,
-              title: post.title,
-              image: post.imageUrls?.[0] || null,
-              likes: likeCount,
-              comments: commentCount,
-              shares: post.sharesCount || 0,
-              hasLiked: hasLiked,
-              tags: Array.isArray(post.tags) ? post.tags : (post.tags ? [post.tags] : []),
-              location: post.location
-            };
-          }));
-
-          console.log('Transformed posts:', transformedPosts);
-          setPosts(transformedPosts);
+          {
+            id: 2,
+            user: {
+              name: 'John Welkin',
+              username: '@jwelkin31',
+              avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=200',
+              isVerified: false
+            },
+            timestamp: '5h ago',
+            content: 'Just set a new PR!!! 225lb bench for 5 reps, been working towards this for months. Hard work and consistency really do pay off! Thanks to the baSICK app for helping me track my progress.',
+            image: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=1000',
+            likes: 8,
+            comments: 1,
+            shares: 0,
+            hasLiked: true,
+            tags: ['PR', 'Strength'],
+            createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+          }
+        ];
+        
+        if (isLoadMore) {
+          setHasMore(false); // No more default posts to load
         } else {
-          console.error('Failed to fetch posts:', response.status);
-          // Fallback to default posts
+          setPosts(defaultPosts);
+          setHasMore(false);
+        }
+        return;
+      }
+
+      // Fetch posts from API with pagination
+      const response = await fetch(`http://localhost:8080/api/posts?page=${pageNum}&size=5&sort=createdAt,desc`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const apiPosts = data.content || data; // Handle both paginated and non-paginated responses
+        const isLastPage = data.last !== undefined ? data.last : apiPosts.length < 5;
+        
+        console.log(`Fetched ${apiPosts.length} posts for page ${pageNum}:`, apiPosts);
+        
+        // Transform API posts to match UI format and fetch like/comment counts
+        const transformedPosts = await Promise.all(apiPosts.map(async (post) => {
+          console.log('Processing post:', post.id, 'with tags:', post.tags);
+          
+          // Get like and comment counts
+          const [likeCount, commentCount, hasLiked] = await Promise.all([
+            likeAPI.getLikeCount(post.id).catch(() => 0),
+            commentAPI.getCommentCount(post.id).catch(() => 0),
+            likeAPI.hasUserLikedPost(user?.uid || localStorage.getItem('firebaseUid'), post.id).catch(() => false)
+          ]);
+          
+          return {
+            id: post.id,
+            user: {
+              name: post.authorName || 'User',
+              username: `@${post.authorName?.toLowerCase().replace(/\s+/g, '_') || 'user'}`,
+              avatar: post.authorProfilePicture || 'https://via.placeholder.com/200x200/374151/ffffff?text=U',
+              isVerified: false
+            },
+            timestamp: formatTimestamp(post.createdAt),
+            content: post.content,
+            title: post.title,
+            image: post.imageUrls?.[0] || null,
+            likes: likeCount,
+            comments: commentCount,
+            shares: post.sharesCount || 0,
+            hasLiked: hasLiked,
+            tags: Array.isArray(post.tags) ? post.tags : (post.tags ? [post.tags] : []),
+            location: post.location,
+            createdAt: post.createdAt // Keep the original timestamp for sorting
+          };
+        }));
+
+        console.log('Transformed posts:', transformedPosts);
+        
+        if (isLoadMore) {
+          // Append new posts to existing ones
+          setPosts(prevPosts => [...prevPosts, ...transformedPosts]);
+        } else {
+          // Replace posts (initial load)
+          setPosts(transformedPosts);
+        }
+        
+        // Update pagination state
+        setPage(pageNum);
+        setHasMore(!isLastPage && transformedPosts.length === 5);
+        
+      } else {
+        console.error('Failed to fetch posts:', response.status);
+        // Fallback to empty array for load more, keep existing posts
+        if (!isLoadMore) {
           setPosts([]);
         }
-      } catch (error) {
-        console.error('Error fetching posts:', error);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      if (!isLoadMore) {
         setPosts([]);
-      } finally {
-        setLoading(false);
+      }
+      setHasMore(false);
+    } finally {
+      if (!isLoadMore) setLoading(false);
+      else setLoadingMore(false);
+    }
+  }, [user]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchPosts(0, false);
+  }, [fetchPosts]);
+
+  // Infinite scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loadingMore || !hasMore) return;
+      
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      // Load more when user is 200px from bottom
+      if (scrollTop + windowHeight >= documentHeight - 200) {
+        console.log('Loading more posts...');
+        fetchPosts(page + 1, true);
       }
     };
 
-    fetchPosts();
-  }, [user]);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [page, loadingMore, hasMore, fetchPosts]);
 
   // Fixed handle like/unlike with debouncing and request tracking
-  const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+  const handleLikeToggle = async (postId) => {
     try {
       const userId = user?.uid || user?.firebaseUid || localStorage.getItem('firebaseUid');
       if (!userId) {
@@ -499,28 +556,28 @@ const UsersFeed = () => {
     return userData.profilePictureUrl || user?.profilePictureUrl || 'https://via.placeholder.com/200x200/374151/ffffff?text=U';
   };
 
-  // Enhanced onPost handler with better logging
+  // Enhanced onPost handler with better logging and proper timestamp
   const handleNewPost = (newPost) => {
     console.log('Received new post in UsersFeed:', newPost);
     console.log('New post tags:', newPost.tags);
     
-    // Ensure tags are properly formatted
+    // Ensure tags are properly formatted and add current timestamp
     const processedPost = {
       ...newPost,
       tags: Array.isArray(newPost.tags) ? newPost.tags : (newPost.tags ? [newPost.tags] : []),
       hasLiked: false,
       likes: 0,
       comments: 0,
-      shares: 0
+      shares: 0,
+      createdAt: newPost.createdAt || new Date().toISOString(), // Ensure we have a timestamp
+      timestamp: formatTimestamp(newPost.createdAt || new Date().toISOString())
     };
     
     console.log('Processed post:', processedPost);
     
-    setPosts((prev) => {
-      const updatedPosts = [processedPost, ...prev];
-      console.log('Updated posts state:', updatedPosts);
-      return updatedPosts;
-    });
+    // Add new post at the beginning
+    setPosts((prev) => [processedPost, ...prev]);
+    console.log('Updated posts state with new post');
   };
 
   if (loading) {
@@ -739,7 +796,7 @@ const UsersFeed = () => {
                         className={`flex-1 flex items-center justify-center py-1.5 md:py-3 hover:bg-zinc-800 rounded-md transition-colors ${
                           post.hasLiked ? 'text-red-500' : 'text-zinc-300'
                         } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={() => handleLikeToggle(post.id, post.hasLiked)}
+                        onClick={() => handleLikeToggle(post.id)}
                         disabled={isLiking}
                       >
                         {isLiking ? (
@@ -796,6 +853,22 @@ const UsersFeed = () => {
                   </div>
                 );
               })
+            )}
+
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500 mx-auto mb-4"></div>
+                <p className="text-zinc-400">Loading more posts...</p>
+              </div>
+            )}
+
+            {/* End of posts indicator */}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-zinc-500">You've reached the end of the feed!</p>
+                <p className="text-zinc-600 text-sm mt-2">Share your own fitness journey to see more content.</p>
+              </div>
             )}
 
             <CommentModal
@@ -861,7 +934,7 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
   const [userInfoCache, setUserInfoCache] = useState({});
 
   // Function to get user info by ID
-  const getUserInfo = async (userId) => {
+  const getUserInfo = useCallback(async (userId) => {
     // Check cache first
     if (userInfoCache[userId]) {
       return userInfoCache[userId];
@@ -899,10 +972,10 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
     const fallbackInfo = { name: 'User', avatar: 'https://via.placeholder.com/28x28/374151/ffffff?text=U' };
     setUserInfoCache(prev => ({ ...prev, [userId]: fallbackInfo }));
     return fallbackInfo;
-  };
+  }, [user?.accessToken, userInfoCache]);
 
   // Fetch comments function
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       setLoadingComments(true);
       const fetchedComments = await commentAPI.getComments(post.id);
@@ -936,12 +1009,12 @@ const InlineCommentSection = ({ post, onCommentSubmit, getCurrentUserAvatar, onU
     } finally {
       setLoadingComments(false);
     }
-  };
+  }, [post.id, getUserInfo]); // Dependencies: post.id and getUserInfo
 
   // Fetch comments for this post - UPDATED to refresh on trigger
   useEffect(() => {
     fetchComments();
-  }, [post.id, refreshTrigger]); // Added refreshTrigger dependency
+  }, [post.id, refreshTrigger, fetchComments]); // Added fetchComments dependency
 
   const handleSubmit = async (e) => {
     e.preventDefault();

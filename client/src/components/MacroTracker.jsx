@@ -60,28 +60,28 @@ const MacroTracker = () => {
         const dailyProtein = data.dailyProteinGoal || 140;
         const dailyCarbs = data.dailyCarbsGoal || 240;
         const dailyFat = data.dailyFatsGoal || data.dailyFatGoal || 65; // FIXED: Handle both possible field names
-        
+
         setMacroData(prev => ({
-          calories: { 
-            ...prev.calories, 
+          calories: {
+            ...prev.calories,
             goal: dailyCalories,
             weeklyGoal: dailyCalories * 7,
             monthlyGoal: dailyCalories * 30
           },
-          protein: { 
-            ...prev.protein, 
+          protein: {
+            ...prev.protein,
             goal: dailyProtein,
             weeklyGoal: dailyProtein * 7,
             monthlyGoal: dailyProtein * 30
           },
-          carbs: { 
-            ...prev.carbs, 
+          carbs: {
+            ...prev.carbs,
             goal: dailyCarbs,
             weeklyGoal: dailyCarbs * 7,
             monthlyGoal: dailyCarbs * 30
           },
-          fat: { 
-            ...prev.fat, 
+          fat: {
+            ...prev.fat,
             goal: dailyFat,
             weeklyGoal: dailyFat * 7,
             monthlyGoal: dailyFat * 30
@@ -142,27 +142,27 @@ const MacroTracker = () => {
 
   try {
     setLoading(true);
-    
+
     let foodLogs = [];
-    
+
     // Build proper date filters using existing endpoints
     switch (timeframe) {
       case 'today':
         const todayStr = new Date().toISOString().split('T')[0];
         const todayEndpoint = `http://localhost:8080/api/food-logs/user/${user.uid}/date/${todayStr}`;
-        
+
         const todayResponse = await fetch(todayEndpoint, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (todayResponse.ok) {
           foodLogs = await todayResponse.json();
         }
         break;
-        
+
       case 'week':
         // Get last 7 days by calling the date endpoint for each day
         const weekPromises = [];
@@ -170,7 +170,7 @@ const MacroTracker = () => {
           const date = new Date();
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
-          
+
           weekPromises.push(
             fetch(`http://localhost:8080/api/food-logs/user/${user.uid}/date/${dateStr}`, {
               headers: {
@@ -180,11 +180,11 @@ const MacroTracker = () => {
             }).then(response => response.ok ? response.json() : [])
           );
         }
-        
+
         const weekResults = await Promise.all(weekPromises);
         foodLogs = weekResults.flat(); // Combine all days
         break;
-        
+
       case 'month':
         // Get last 30 days by calling the date endpoint for each day
         const monthPromises = [];
@@ -192,7 +192,7 @@ const MacroTracker = () => {
           const date = new Date();
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
-          
+
           monthPromises.push(
             fetch(`http://localhost:8080/api/food-logs/user/${user.uid}/date/${dateStr}`, {
               headers: {
@@ -202,11 +202,11 @@ const MacroTracker = () => {
             }).then(response => response.ok ? response.json() : [])
           );
         }
-        
+
         const monthResults = await Promise.all(monthPromises);
         foodLogs = monthResults.flat(); // Combine all days
         break;
-        
+
       default:
         // Fallback to getting all user logs with limit
         const allEndpoint = `http://localhost:8080/api/food-logs/user/${user.uid}`;
@@ -216,7 +216,7 @@ const MacroTracker = () => {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (allResponse.ok) {
           foodLogs = await allResponse.json();
         }
@@ -224,7 +224,7 @@ const MacroTracker = () => {
     }
 
     console.log('Food logs from backend:', foodLogs); // DEBUG: Check what backend returns
-    
+
     // Convert backend UserFoodLogDTO to frontend format - FIX FATS FIELD
     const convertedEntries = foodLogs.map(log => {
       console.log('Individual log:', log); // DEBUG: Check individual log structure
@@ -232,14 +232,14 @@ const MacroTracker = () => {
         id: log.id,
         name: log.foodName,
         brand: log.brand,
-        time: new Date(log.consumedAt).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
+        time: new Date(log.consumedAt).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
         }),
-        date: new Date(log.consumedAt).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric' 
+        date: new Date(log.consumedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
         }),
         mealType: log.mealType,
         calories: Math.round(log.calories || 0),
@@ -259,7 +259,7 @@ const MacroTracker = () => {
     console.log('Converted entries:', convertedEntries); // DEBUG: Check converted data
 
     setFoodEntries(convertedEntries);
-    
+
     // Calculate totals for macro data
     const totals = convertedEntries.reduce((acc, entry) => ({
       calories: acc.calories + entry.calories,
@@ -306,7 +306,7 @@ const MacroTracker = () => {
         }
       };
     });
-    
+
   } catch (error) {
     console.error('Error loading food logs:', error);
     setError(`Error loading food logs: ${error.message}`);
@@ -466,8 +466,8 @@ const MacroTracker = () => {
             <div className="bg-zinc-900 rounded-xl p-5">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold kanit-medium">
-                  {activeTab === 'today' ? 'Daily Targets' : 
-                   activeTab === 'week' ? 'Weekly Targets' : 
+                  {activeTab === 'today' ? 'Daily Targets' :
+                   activeTab === 'week' ? 'Weekly Targets' :
                    'Monthly Targets'}
                 </h2>
                 <span className="text-lime-500 text-sm kanit-regular">

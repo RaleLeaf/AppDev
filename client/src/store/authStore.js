@@ -31,7 +31,8 @@ const useAuthStore = create(
       userId: null, // Add userId to the store
       userProfileId: null, // Add userProfileId to the store
       isAuthenticated: false,
-      isLoading: true,
+      isLoading: true, // Initial app loading state
+      isSubmitting: false, // Form submission loading state
       error: null,
 
       // Actions
@@ -61,7 +62,8 @@ const useAuthStore = create(
           userId: userId, // Use the Firestore document ID
           userProfileId: userProfileId, // Set internal userProfileId
           isAuthenticated: !!user, 
-          isLoading: false, 
+          isLoading: false, // Always set loading to false when setting user
+          isSubmitting: false, 
           error: null 
         });
 
@@ -78,7 +80,7 @@ const useAuthStore = create(
       },
 
       setError: (error) => {
-        set({ error, isLoading: false });
+        set({ error, isSubmitting: false });
       },
 
       clearErrors: () => {
@@ -153,7 +155,7 @@ const useAuthStore = create(
       // Sign in
       signIn: async (email, password) => {
         try {
-          set({ isLoading: true, error: null });
+          set({ isSubmitting: true, error: null });
           
           // Sign in with Firebase
           const firebaseUser = await authService.signIn(email, password);
@@ -189,7 +191,7 @@ const useAuthStore = create(
             set({ 
               user: firebaseUser, 
               isAuthenticated: true, 
-              isLoading: false,
+              isSubmitting: false,
               error: null 
             });
             return firebaseUser;
@@ -198,7 +200,7 @@ const useAuthStore = create(
           console.error('Sign-in failed:', error);
           set({ 
             error: error.message || 'Sign-in failed', 
-            isLoading: false 
+            isSubmitting: false 
           });
           throw error;
         }
@@ -207,7 +209,7 @@ const useAuthStore = create(
       // Sign up (create user)
       signUp: async (name, email, password) => {
         try {
-          set({ isLoading: true, error: null });
+          set({ isSubmitting: true, error: null });
           
           // Step 1: Create user in Firebase Auth
           const firebaseUser = await authService.signUp(email, password);
@@ -283,7 +285,7 @@ const useAuthStore = create(
           
           set({ 
             error: error.message || 'Sign-up failed', 
-            isLoading: false 
+            isSubmitting: false 
           });
           throw error;
         }
@@ -292,7 +294,7 @@ const useAuthStore = create(
       // Sign in with Google
       signInWithGoogle: async () => {
         try {
-          set({ isLoading: true, error: null });
+          set({ isSubmitting: true, error: null });
           
           // Sign in with Google via Firebase
           const firebaseUser = await authService.signInWithGoogle();
@@ -321,7 +323,7 @@ const useAuthStore = create(
             set({ 
               user: combinedUser, 
               isAuthenticated: true, 
-              isLoading: false,
+              isSubmitting: false,
               error: null 
             });
             return combinedUser;
@@ -381,7 +383,7 @@ const useAuthStore = create(
               set({ 
                 user: combinedUser, 
                 isAuthenticated: true, 
-                isLoading: false,
+                isSubmitting: false,
                 error: null 
               });
               return combinedUser;
@@ -398,7 +400,7 @@ const useAuthStore = create(
               set({ 
                 user: fallbackUser, 
                 isAuthenticated: true, 
-                isLoading: false,
+                isSubmitting: false,
                 error: null 
               });
               return fallbackUser;
@@ -408,7 +410,7 @@ const useAuthStore = create(
           console.error('Google sign-in failed:', error);
           set({ 
             error: error.message || 'Google sign-in failed', 
-            isLoading: false 
+            isSubmitting: false 
           });
           throw error;
         }
