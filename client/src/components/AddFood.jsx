@@ -341,7 +341,7 @@ const AddFood = () => {
         calories: calories,
         protein: protein,
         carbs: carbs,
-        fat: fat,
+        fats: fat,
         fiber: Math.round((food.fiber || 0) * multiplier),
         sugar: Math.round((food.sugar || 0) * multiplier),
         sodium: Math.round((food.sodium || 0) * multiplier),

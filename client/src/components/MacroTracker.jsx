@@ -119,7 +119,7 @@ const MacroTracker = () => {
           calories: Math.round(log.calories || 0),
           protein: Math.round(log.protein || 0),
           carbs: Math.round(log.carbs || 0),
-          fat: Math.round(log.fat || 0),
+          fat: Math.round(log.fats || 0),
           quantity: log.quantity,
           unit: log.unit,
           consumedAt: log.consumedAt,
