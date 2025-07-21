@@ -13,12 +13,12 @@ const MacroTracker = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // State for macro data
+  // UPDATED: State for macro data with proper weekly/monthly tracking
   const [macroData, setMacroData] = useState({
-    calories: { consumed: 0, goal: 2000, percentage: 0 },
-    protein: { consumed: 0, goal: 140, percentage: 0 },
-    carbs: { consumed: 0, goal: 240, percentage: 0 },
-    fat: { consumed: 0, goal: 65, percentage: 0 }
+    calories: { consumed: 0, goal: 2000, percentage: 0, weeklyGoal: 14000, monthlyGoal: 60000 },
+    protein: { consumed: 0, goal: 140, percentage: 0, weeklyGoal: 980, monthlyGoal: 4200 },
+    carbs: { consumed: 0, goal: 240, percentage: 0, weeklyGoal: 1680, monthlyGoal: 7200 },
+    fat: { consumed: 0, goal: 65, percentage: 0, weeklyGoal: 455, monthlyGoal: 1950 }
   });
   
   // State for food entries from backend
@@ -34,7 +34,7 @@ const MacroTracker = () => {
     return token;
   };
 
-  // Fetch user's macro tracker settings
+  // UPDATED: Fetch user's macro tracker settings - FIX FATS FIELD
   const fetchUserMacroTracker = async () => {
     const authToken = getAuthToken();
     if (!authToken || !user?.uid) {
@@ -42,7 +42,8 @@ const MacroTracker = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/user-macro-trackers/user/${user.uid}`, {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`http://localhost:8080/api/user-macro-trackers/user/${user.uid}/date/${today}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -51,140 +52,268 @@ const MacroTracker = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Macro tracker data:', data); // DEBUG: Check what backend returns
         setUserMacroTracker(data);
         
-        // Update macro goals based on user settings
-        setMacroData(prev => ({
-          ...prev,
-          calories: { ...prev.calories, goal: data.targetCalories || 2000 },
-          protein: { ...prev.protein, goal: data.targetProtein || 140 },
-          carbs: { ...prev.carbs, goal: data.targetCarbs || 240 },
-          fat: { ...prev.fat, goal: data.targetFat || 65 }
-        }));
-      }
-    } catch (error) {
-      // Silent fail for macro tracker settings
-    }
-  };
+        // Update macro goals based on user settings with weekly/monthly calculations
+        const dailyCalories = data.dailyCalorieGoal || 2000;
+        const dailyProtein = data.dailyProteinGoal || 140;
+        const dailyCarbs = data.dailyCarbsGoal || 240;
+        const dailyFat = data.dailyFatsGoal || data.dailyFatGoal || 65; // FIXED: Handle both possible field names
 
-  // Fetch user's food logs
-  const fetchUserFoodLogs = async (timeframe = 'today') => {
-    const authToken = getAuthToken();
-    if (!authToken || !user?.uid) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      let endpoint = `http://localhost:8080/api/food-logs/user/${user.uid}`;
-      
-      // Add date filters based on timeframe
-      const today = new Date();
-      
-      switch (timeframe) {
-        case 'today':
-          const todayStr = today.toISOString().split('T')[0];
-          endpoint = `http://localhost:8080/api/food-logs/user/${user.uid}/date/${todayStr}`;
-          break;
-        case 'week':
-        case 'month':
-          endpoint = `http://localhost:8080/api/food-logs/user/${user.uid}/recent?limit=${timeframe === 'week' ? 50 : 100}`;
-          break;
-        default:
-          endpoint = `http://localhost:8080/api/food-logs/user/${user.uid}?limit=50`;
-      }
-      
-      const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Convert backend UserFoodLogDTO to frontend format
-        const convertedEntries = data.map(log => ({
-          id: log.id,
-          name: log.foodName,
-          brand: log.brand,
-          time: new Date(log.consumedAt).toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-          }),
-          mealType: log.mealType,
-          calories: Math.round(log.calories || 0),
-          protein: Math.round(log.protein || 0),
-          carbs: Math.round(log.carbs || 0),
-          fat: Math.round(log.fats || 0),
-          quantity: log.quantity,
-          unit: log.unit,
-          consumedAt: log.consumedAt,
-          isHomemade: log.isHomemade || false
-        }));
-
-        // Filter by timeframe for week/month
-        let filteredEntries = convertedEntries;
-        if (timeframe === 'week') {
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          filteredEntries = convertedEntries.filter(entry => 
-            new Date(entry.consumedAt) >= weekAgo
-          );
-        } else if (timeframe === 'month') {
-          const monthAgo = new Date();
-          monthAgo.setMonth(monthAgo.getMonth() - 1);
-          filteredEntries = convertedEntries.filter(entry => 
-            new Date(entry.consumedAt) >= monthAgo
-          );
-        }
-
-        setFoodEntries(filteredEntries);
-        
-        // Calculate totals for macro data
-        const totals = filteredEntries.reduce((acc, entry) => ({
-          calories: acc.calories + entry.calories,
-          protein: acc.protein + entry.protein,
-          carbs: acc.carbs + entry.carbs,
-          fat: acc.fat + entry.fat
-        }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
-
-        // Update macro data with calculated totals
         setMacroData(prev => ({
           calories: {
             ...prev.calories,
-            consumed: totals.calories,
-            percentage: Math.min((totals.calories / prev.calories.goal) * 100, 100)
+            goal: dailyCalories,
+            weeklyGoal: dailyCalories * 7,
+            monthlyGoal: dailyCalories * 30
           },
           protein: {
             ...prev.protein,
-            consumed: totals.protein,
-            percentage: Math.min((totals.protein / prev.protein.goal) * 100, 100)
+            goal: dailyProtein,
+            weeklyGoal: dailyProtein * 7,
+            monthlyGoal: dailyProtein * 30
           },
           carbs: {
             ...prev.carbs,
-            consumed: totals.carbs,
-            percentage: Math.min((totals.carbs / prev.carbs.goal) * 100, 100)
+            goal: dailyCarbs,
+            weeklyGoal: dailyCarbs * 7,
+            monthlyGoal: dailyCarbs * 30
           },
           fat: {
             ...prev.fat,
-            consumed: totals.fat,
-            percentage: Math.min((totals.fat / prev.fat.goal) * 100, 100)
+            goal: dailyFat,
+            weeklyGoal: dailyFat * 7,
+            monthlyGoal: dailyFat * 30
           }
         }));
-      } else {
-        const errorText = await response.text();
-        setError(`Failed to load food logs: ${errorText}`);
       }
     } catch (error) {
-      setError(`Error loading food logs: ${error.message}`);
-    } finally {
-      setLoading(false);
+      // Try to create a default macro tracker for today
+      try {
+        await createDefaultMacroTracker();
+      } catch (createError) {
+        // Silent fail
+      }
     }
   };
+
+  // UPDATED: Create default macro tracker for user
+  const createDefaultMacroTracker = async () => {
+    const authToken = getAuthToken();
+    if (!authToken || !user?.uid) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const defaultTracker = {
+        userId: user.uid,
+        date: today,
+        dailyCalorieGoal: 2000,
+        dailyProteinGoal: 140,
+        dailyCarbsGoal: 240,
+        dailyFatsGoal: 65,
+        dailyFiberGoal: 25,
+        dailySugarGoal: 50,
+        dailySodiumGoal: 2300,
+        waterGoal: 2000,
+        isIntermittentFasting: false,
+        fastingHours: 16
+      };
+
+      await fetch('http://localhost:8080/api/user-macro-trackers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(defaultTracker)
+      });
+    } catch (error) {
+      // Silent fail
+    }
+  };
+
+  // UPDATED: Fetch user's food logs with proper date filtering - FIX FATS FIELD
+  const fetchUserFoodLogs = async (timeframe = 'today') => {
+  const authToken = getAuthToken();
+  if (!authToken || !user?.uid) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    let foodLogs = [];
+
+    // Build proper date filters using existing endpoints
+    switch (timeframe) {
+      case 'today':
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayEndpoint = `http://localhost:8080/api/food-logs/user/${user.uid}/date/${todayStr}`;
+
+        const todayResponse = await fetch(todayEndpoint, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (todayResponse.ok) {
+          foodLogs = await todayResponse.json();
+        }
+        break;
+
+      case 'week':
+        // Get last 7 days by calling the date endpoint for each day
+        const weekPromises = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+
+          weekPromises.push(
+            fetch(`http://localhost:8080/api/food-logs/user/${user.uid}/date/${dateStr}`, {
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+              },
+            }).then(response => response.ok ? response.json() : [])
+          );
+        }
+
+        const weekResults = await Promise.all(weekPromises);
+        foodLogs = weekResults.flat(); // Combine all days
+        break;
+
+      case 'month':
+        // Get last 30 days by calling the date endpoint for each day
+        const monthPromises = [];
+        for (let i = 0; i < 30; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+
+          monthPromises.push(
+            fetch(`http://localhost:8080/api/food-logs/user/${user.uid}/date/${dateStr}`, {
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+              },
+            }).then(response => response.ok ? response.json() : [])
+          );
+        }
+
+        const monthResults = await Promise.all(monthPromises);
+        foodLogs = monthResults.flat(); // Combine all days
+        break;
+
+      default:
+        // Fallback to getting all user logs with limit
+        const allEndpoint = `http://localhost:8080/api/food-logs/user/${user.uid}`;
+        const allResponse = await fetch(allEndpoint, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (allResponse.ok) {
+          foodLogs = await allResponse.json();
+        }
+        break;
+    }
+
+    console.log('Food logs from backend:', foodLogs); // DEBUG: Check what backend returns
+
+    // Convert backend UserFoodLogDTO to frontend format - FIX FATS FIELD
+    const convertedEntries = foodLogs.map(log => {
+      console.log('Individual log:', log); // DEBUG: Check individual log structure
+      return {
+        id: log.id,
+        name: log.foodName,
+        brand: log.brand,
+        time: new Date(log.consumedAt).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        date: new Date(log.consumedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        }),
+        mealType: log.mealType,
+        calories: Math.round(log.calories || 0),
+        protein: Math.round(log.protein || 0),
+        carbs: Math.round(log.carbs || 0),
+        fat: Math.round(log.fats || log.fat || 0), // FIXED: Try both fats and fat fields
+        quantity: log.quantity,
+        unit: log.unit,
+        consumedAt: log.consumedAt,
+        isHomemade: log.isHomemade || false
+      };
+    });
+
+    // Sort by most recent first
+    convertedEntries.sort((a, b) => new Date(b.consumedAt) - new Date(a.consumedAt));
+
+    console.log('Converted entries:', convertedEntries); // DEBUG: Check converted data
+
+    setFoodEntries(convertedEntries);
+
+    // Calculate totals for macro data
+    const totals = convertedEntries.reduce((acc, entry) => ({
+      calories: acc.calories + entry.calories,
+      protein: acc.protein + entry.protein,
+      carbs: acc.carbs + entry.carbs,
+      fat: acc.fat + entry.fat
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+    console.log('Calculated totals:', totals); // DEBUG: Check totals
+
+    // UPDATED: Update macro data with calculated totals based on timeframe
+    setMacroData(prev => {
+      const getGoalForTimeframe = (macroType) => {
+        switch (timeframe) {
+          case 'week':
+            return prev[macroType].weeklyGoal;
+          case 'month':
+            return prev[macroType].monthlyGoal;
+          default:
+            return prev[macroType].goal;
+        }
+      };
+
+      return {
+        calories: {
+          ...prev.calories,
+          consumed: totals.calories,
+          percentage: Math.min((totals.calories / getGoalForTimeframe('calories')) * 100, 100)
+        },
+        protein: {
+          ...prev.protein,
+          consumed: totals.protein,
+          percentage: Math.min((totals.protein / getGoalForTimeframe('protein')) * 100, 100)
+        },
+        carbs: {
+          ...prev.carbs,
+          consumed: totals.carbs,
+          percentage: Math.min((totals.carbs / getGoalForTimeframe('carbs')) * 100, 100)
+        },
+        fat: {
+          ...prev.fat,
+          consumed: totals.fat,
+          percentage: Math.min((totals.fat / getGoalForTimeframe('fat')) * 100, 100)
+        }
+      };
+    });
+
+  } catch (error) {
+    console.error('Error loading food logs:', error);
+    setError(`Error loading food logs: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Delete a food log entry
   const deleteFoodEntry = async (entryId) => {
@@ -214,10 +343,22 @@ const MacroTracker = () => {
     }
   };
 
-  // Handle tab change
+  // UPDATED: Handle tab change
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     fetchUserFoodLogs(newTab);
+  };
+
+  // UPDATED: Get current goal based on timeframe
+  const getCurrentGoal = (macroType) => {
+    switch (activeTab) {
+      case 'week':
+        return macroData[macroType].weeklyGoal;
+      case 'month':
+        return macroData[macroType].monthlyGoal;
+      default:
+        return macroData[macroType].goal;
+    }
   };
 
   // Load initial data
@@ -320,13 +461,17 @@ const MacroTracker = () => {
             </div>
           </div>
 
-          {/* Macro Summary */}
+          {/* UPDATED: Macro Summary */}
           <div className="px-5 mb-8">
             <div className="bg-zinc-900 rounded-xl p-5">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold kanit-medium">Daily Targets</h2>
+                <h2 className="text-lg font-bold kanit-medium">
+                  {activeTab === 'today' ? 'Daily Targets' :
+                   activeTab === 'week' ? 'Weekly Targets' :
+                   'Monthly Targets'}
+                </h2>
                 <span className="text-lime-500 text-sm kanit-regular">
-                  {Math.round(macroData.calories.consumed)} / {macroData.calories.goal} cal
+                  {Math.round(macroData.calories.consumed)} / {Math.round(getCurrentGoal('calories'))} cal
                 </span>
               </div>
               
@@ -348,6 +493,9 @@ const MacroTracker = () => {
                       </div>
                     </CircularProgressbarWithChildren>
                   </div>
+                  <p className="text-sm kanit-light text-center">
+                    {Math.round(macroData.calories.consumed)} / {Math.round(getCurrentGoal('calories'))} cal
+                  </p>
                 </div>
                 
                 {/* Protein */}
@@ -367,7 +515,9 @@ const MacroTracker = () => {
                       </div>
                     </CircularProgressbarWithChildren>
                   </div>
-                  <p className="text-sm kanit-light">{Math.round(macroData.protein.consumed)}g / {macroData.protein.goal}g</p>
+                  <p className="text-sm kanit-light text-center">
+                    {Math.round(macroData.protein.consumed)}g / {Math.round(getCurrentGoal('protein'))}g
+                  </p>
                 </div>
                 
                 {/* Carbs */}
@@ -387,7 +537,9 @@ const MacroTracker = () => {
                       </div>
                     </CircularProgressbarWithChildren>
                   </div>
-                  <p className="text-sm kanit-light">{Math.round(macroData.carbs.consumed)}g / {macroData.carbs.goal}g</p>
+                  <p className="text-sm kanit-light text-center">
+                    {Math.round(macroData.carbs.consumed)}g / {Math.round(getCurrentGoal('carbs'))}g
+                  </p>
                 </div>
                 
                 {/* Fat */}
@@ -407,7 +559,9 @@ const MacroTracker = () => {
                       </div>
                     </CircularProgressbarWithChildren>
                   </div>
-                  <p className="text-sm kanit-light">{Math.round(macroData.fat.consumed)}g / {macroData.fat.goal}g</p>
+                  <p className="text-sm kanit-light text-center">
+                    {Math.round(macroData.fat.consumed)}g / {Math.round(getCurrentGoal('fat'))}g
+                  </p>
                 </div>
               </div>
             </div>
@@ -430,7 +584,7 @@ const MacroTracker = () => {
               </button>
             </div>
             
-            {/* Food Entries */}
+            {/* UPDATED: Food Entries with date for weekly/monthly */}
             <div className="space-y-3 mb-24">
               {foodEntries.length > 0 ? (
                 foodEntries.map((food) => (
@@ -448,6 +602,12 @@ const MacroTracker = () => {
                         )}
                       </div>
                       <div className="flex items-center text-xs text-gray-400">
+                        {activeTab !== 'today' && (
+                          <>
+                            <span>{food.date}</span>
+                            <span className="mx-2">•</span>
+                          </>
+                        )}
                         <span>{food.time}</span>
                         <span className="mx-2">•</span>
                         <span className="bg-lime-900 text-lime-300 px-2 py-1 rounded uppercase">
