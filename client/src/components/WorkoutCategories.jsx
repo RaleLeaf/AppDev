@@ -83,15 +83,79 @@ const WorkoutCategories = () => {
       const token = localStorage.getItem('authToken');
       const currentConfig = difficultyConfig[selectedDifficulty];
 
-      // Updated categories based on your requirements
-      const categories = [
-        { title: "Wake Up Call", category: "Arms", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false },
-        { title: "Full Body Goal Crusher", category: "Full Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
-        { title: "Lower Body Strength", category: "Lower Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
-        { title: "Upper Body Focus", category: "Upper Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false },
-        { title: "Core Crusher", category: "Abs", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true },
-        { title: "Cardio Blast", category: "Cardio", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false }
+      // Define all available workout categories with difficulty-specific images
+      const allCategories = [
+        { 
+          title: "Wake Up Call", 
+          category: "Arms", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://res.cloudinary.com/hydrow/image/upload/f_auto/w_3840/q_100/v1725901166/Blog/can-you-do-full-body-workout-everyday.jpg"
+            // ADVANCED: removed from this difficulty
+          }
+        },
+        { 
+          title: "Full Body Goal Crusher", 
+          category: "Full Body", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://explosivewhey.com/cdn/shop/articles/best-workout-routine-for-gym-beginners-135325.png?v=1738755379&width=2048",
+            ADVANCED: "https://www.gymreapers.com/cdn/shop/articles/header-image-01_Cable-chest-workout---maximizing-your-muscle-growth.jpg?v=1721671171&width=2048"
+          }
+        },
+        { 
+          title: "Lower Body Strength", 
+          category: "Lower Body", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://media.self.com/photos/61bcd0e05aed92fc4251b026/4:3/w_2560%2Cc_limit/GettyImages-1213234926.jpeg"
+            // ADVANCED: removed from this difficulty
+          }
+        },
+        { 
+          title: "Upper Body Focus", 
+          category: "Upper Body", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://i0.wp.com/www.muscleandfitness.com/wp-content/uploads/2016/09/Bodybuilder-Working-Out-His-Upper-Body-With-Cable-Crossover-Exercise.jpg?quality=86&strip=all",
+            ADVANCED: "https://www.mensfitness.com/.image/w_3840,q_auto:good,c_fill,ar_4:3/MjEyMzQ4MTM3MzU5MDI1Nzky/man-doing-dips.jpg"
+          }
+        },
+        { 
+          title: "Core Crusher", 
+          category: "Abs", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://v3apparel.com/cdn/shop/articles/Get_Fit_in_Just_10_Minutes_-_Full-Body_Workout_for_Busy_Women_-_V3_Apparel_seamless_workout_leggings_gym_tights_fitness_sports_bras_tank_tops_and_t_shirts.jpg?v=1679523333&width=2048",
+            ADVANCED: "https://fithero.app/static/01446ce5b37816640ab478e68fabe487/dd919/core-workout.jpg"
+          }
+        },
+        { 
+          title: "Cardio Blast", 
+          category: "Cardio", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            // INTERMEDIATE and ADVANCED: removed from these difficulties
+          }
+        }
       ];
+
+      // Filter categories based on current difficulty and available images
+      const categories = allCategories
+        .filter(workout => workout.images[selectedDifficulty]) // Only include if image exists for this difficulty
+        .map(workout => ({
+          title: workout.title,
+          category: workout.category,
+          difficulty: selectedDifficulty,
+          image: workout.images[selectedDifficulty],
+          isPro: workout.isPro
+        }));
 
       // Get counts by making individual API calls with difficulty filtering
       const workoutsWithCounts = await Promise.all(
@@ -127,17 +191,82 @@ const WorkoutCategories = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching workout categories:', error);
-      // Fallback with current difficulty and environment
+      
+      // Fallback with current difficulty and environment - use same filtering logic
       const currentConfig = difficultyConfig[selectedDifficulty];
-      const categories = [
-        { title: "Wake Up Call", category: "Arms", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment },
-        { title: "Full Body Goal Crusher", category: "Full Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment },
-        { title: "Lower Body Strength", category: "Lower Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment },
-        { title: "Upper Body Focus", category: "Upper Body", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment },
-        { title: "Core Crusher", category: "Abs", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: true, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment },
-        { title: "Cardio Blast", category: "Cardio", difficulty: selectedDifficulty, image: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", isPro: false, count: "00", difficultyLabel: currentConfig.label, environment: selectedEnvironment }
+      const allCategories = [
+        { 
+          title: "Wake Up Call", 
+          category: "Arms", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://res.cloudinary.com/hydrow/image/upload/f_auto/w_3840/q_100/v1725901166/Blog/can-you-do-full-body-workout-everyday.jpg"
+          }
+        },
+        { 
+          title: "Full Body Goal Crusher", 
+          category: "Full Body", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://explosivewhey.com/cdn/shop/articles/best-workout-routine-for-gym-beginners-135325.png?v=1738755379&width=2048",
+            ADVANCED: "https://www.gymreapers.com/cdn/shop/articles/header-image-01_Cable-chest-workout---maximizing-your-muscle-growth.jpg?v=1721671171&width=2048"
+          }
+        },
+        { 
+          title: "Lower Body Strength", 
+          category: "Lower Body", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://media.self.com/photos/61bcd0e05aed92fc4251b026/4:3/w_2560%2Cc_limit/GettyImages-1213234926.jpeg"
+          }
+        },
+        { 
+          title: "Upper Body Focus", 
+          category: "Upper Body", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://i0.wp.com/www.muscleandfitness.com/wp-content/uploads/2016/09/Bodybuilder-Working-Out-His-Upper-Body-With-Cable-Crossover-Exercise.jpg?quality=86&strip=all",
+            ADVANCED: "https://www.mensfitness.com/.image/w_3840,q_auto:good,c_fill,ar_4:3/MjEyMzQ4MTM3MzU5MDI1Nzky/man-doing-dips.jpg"
+          }
+        },
+        { 
+          title: "Core Crusher", 
+          category: "Abs", 
+          isPro: true,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            INTERMEDIATE: "https://v3apparel.com/cdn/shop/articles/Get_Fit_in_Just_10_Minutes_-_Full-Body_Workout_for_Busy_Women_-_V3_Apparel_seamless_workout_leggings_gym_tights_fitness_sports_bras_tank_tops_and_t_shirts.jpg?v=1679523333&width=2048",
+            ADVANCED: "https://fithero.app/static/01446ce5b37816640ab478e68fabe487/dd919/core-workout.jpg"
+          }
+        },
+        { 
+          title: "Cardio Blast", 
+          category: "Cardio", 
+          isPro: false,
+          images: {
+            BEGINNER: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+          }
+        }
       ];
-      setWorkouts(categories);
+
+      const fallbackCategories = allCategories
+        .filter(workout => workout.images[selectedDifficulty])
+        .map(workout => ({
+          title: workout.title,
+          category: workout.category,
+          difficulty: selectedDifficulty,
+          image: workout.images[selectedDifficulty],
+          isPro: workout.isPro,
+          count: "00",
+          difficultyLabel: currentConfig.label,
+          environment: selectedEnvironment
+        }));
+      
+      setWorkouts(fallbackCategories);
       setLoading(false);
     }
   };

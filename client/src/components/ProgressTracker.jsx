@@ -30,12 +30,46 @@ export default function ProgressTracker() {
     averageHeartRate: 0,
   };
 
-  const mockExercisePlan = [
-    { name: 'Stability Training', time: '10:00' },
-    { name: 'Flash Cycling', time: '12:00' },
-    { name: 'Yoga Flow', time: '15:00' },
-    { name: 'Core Blast', time: '17:00' },
-  ];
+  // 🆕 NEW: Load active workout from localStorage or use fallback
+  const [activeWorkout, setActiveWorkout] = useState(null);
+  const [exercisePlan, setExercisePlan] = useState([]);
+
+  // Load active workout on component mount
+  useEffect(() => {
+    const loadActiveWorkout = () => {
+      try {
+        const savedWorkout = localStorage.getItem('activeWorkout');
+        if (savedWorkout) {
+          const workoutData = JSON.parse(savedWorkout);
+          setActiveWorkout(workoutData);
+          setExercisePlan(workoutData.exercises || []);
+          console.log('📋 Loaded active workout:', workoutData);
+        } else {
+          // Fallback to mock exercises if no workout is saved
+          const mockExercisePlan = [
+            { name: 'Stability Training', time: '10:00' },
+            { name: 'Flash Cycling', time: '12:00' },
+            { name: 'Yoga Flow', time: '15:00' },
+            { name: 'Core Blast', time: '17:00' },
+          ];
+          setExercisePlan(mockExercisePlan);
+          console.log('📋 Using fallback mock exercises');
+        }
+      } catch (error) {
+        console.error('Error loading active workout:', error);
+        // Fallback to mock exercises on error
+        const mockExercisePlan = [
+          { name: 'Stability Training', time: '10:00' },
+          { name: 'Flash Cycling', time: '12:00' },
+          { name: 'Yoga Flow', time: '15:00' },
+          { name: 'Core Blast', time: '17:00' },
+        ];
+        setExercisePlan(mockExercisePlan);
+      }
+    };
+
+    loadActiveWorkout();
+  }, []);
 
   const [stats, setStats] = useState(defaultStats);
   const [doneExercises, setDoneExercises] = useState([]);
@@ -97,6 +131,13 @@ export default function ProgressTracker() {
             });
             setDoneExercises(entry.doneExercises || []); // <-- add this
             setTrackerId(entry.id);
+            
+            // 🚨 DEBUG: Log to understand what's happening
+            console.log('📊 Loaded fitness data:', {
+              numberOfWorkouts: entry.numberOfWorkouts,
+              doneExercises: entry.doneExercises,
+              doneExercisesLength: (entry.doneExercises || []).length
+            });
           } else {
             throw new Error('No entry');
           }
@@ -142,12 +183,14 @@ export default function ProgressTracker() {
       : [...doneExercises, exerciseName];
 
     setDoneExercises(updated);
+    
+    // 🔧 FIX: Update numberOfWorkouts to match actual done exercises count
     setStats((prev) => ({ ...prev, numberOfWorkouts: updated.length }));
 
     const payload = {
       userId,
       trackingDate: new Date(dateKey).toISOString(),
-      numberOfWorkouts: updated.length,
+      numberOfWorkouts: updated.length, // 🔧 FIX: Use actual count
       caloriesBurned: stats.caloriesBurned,
       caloriesConsumed: stats.caloriesConsumed,
       steps: stats.steps,
@@ -163,12 +206,13 @@ export default function ProgressTracker() {
     const payload = {
       userId,
       trackingDate: new Date(dateKey).toISOString(),
-      numberOfWorkouts: stats.numberOfWorkouts,
+      numberOfWorkouts: doneExercises.length, // 🔧 FIX: Use actual done exercises count
       caloriesBurned: stats.caloriesBurned,
       caloriesConsumed: stats.caloriesConsumed,
       steps: stats.steps,
       activeMinutes: stats.activeMinutes,
       averageHeartRate: stats.averageHeartRate,
+      doneExercises: doneExercises, // 🔧 FIX: Include done exercises
     };
     await saveEntry(payload);
     setShowEditModal(false);
@@ -191,17 +235,49 @@ export default function ProgressTracker() {
     setCurrentMonth(newStart);
   };
 
+  // 🆕 NEW: Navigate back to ExerciseList with active workout context
+  const handleBackToWorkout = () => {
+    if (activeWorkout) {
+      navigate('/exercises', {
+        state: {
+          category: activeWorkout.category,
+          title: activeWorkout.title,
+          difficulty: activeWorkout.difficulty,
+          environment: activeWorkout.environment,
+          limit: activeWorkout.exercises?.length || 6
+        }
+      });
+    } else {
+      // If no active workout, go to workout categories
+      navigate('/workout-categories');
+    }
+  };
+
   if (!userId) return <div>Loading user...</div>;
 
   const percentage1 = caloriesGoal > 0 ? (stats.caloriesBurned / caloriesGoal) * 100 : 0;
-  const percentage2 = (stats.numberOfWorkouts / mockExercisePlan.length) * 100;
-  const sortedExercises = [...mockExercisePlan].sort((a, b) =>
+  
+  // 🔧 FIX: Use done exercises length instead of stats.numberOfWorkouts for display
+  const actualCompletedExercises = doneExercises.length;
+  const percentage2 = exercisePlan.length > 0 ? (actualCompletedExercises / exercisePlan.length) * 100 : 0;
+  
+  const sortedExercises = [...exercisePlan].sort((a, b) =>
     doneExercises.includes(a.name) === doneExercises.includes(b.name)
       ? 0
       : doneExercises.includes(a.name)
       ? -1
       : 1
   );
+
+  // 🚨 DEBUG: Log current state
+  console.log('🔍 Current state:', {
+    'stats.numberOfWorkouts': stats.numberOfWorkouts,
+    'doneExercises.length': doneExercises.length,
+    'actualCompletedExercises': actualCompletedExercises,
+    'exercisePlan.length': exercisePlan.length,
+    'percentage2': percentage2,
+    'doneExercises': doneExercises
+  });
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -219,8 +295,48 @@ export default function ProgressTracker() {
           </div>
 
           <div className="hidden md:block p-5 pb-2">
-            <h1 className="text-3xl font-bold kanit-bold">FITNESS TRACKER</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold kanit-bold">FITNESS TRACKER</h1>
+              {/* 🆕 NEW: Back to Workout button */}
+              {activeWorkout && (
+                <button
+                  onClick={handleBackToWorkout}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg kanit-medium transition-colors flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Workout
+                </button>
+              )}
+            </div>
+            {/* 🆕 NEW: Show active workout info */}
+            {activeWorkout && (
+              <div className="mt-2 p-3 bg-zinc-800 rounded-lg">
+                <p className="text-sm text-gray-300">
+                  <span className="text-lime-500 font-semibold">Active Workout:</span> {activeWorkout.title}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {activeWorkout.difficulty} • {activeWorkout.environment} • {exercisePlan.length} exercises
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Mobile Back to Workout button */}
+          {activeWorkout && (
+            <div className="md:hidden px-5 pb-3 relative z-50">
+              <button
+                onClick={handleBackToWorkout}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg kanit-medium transition-colors flex items-center gap-2 text-sm"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to {activeWorkout.title}
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-row p-3 md:-mt-0 -mt-10 relative items-center justify-center gap-4 z-50">
             <button onClick={() => changeMonth("prev")} className="text-white text-2xl">←</button>
@@ -257,7 +373,8 @@ export default function ProgressTracker() {
                   styles={buildStyles({ pathColor: "#EF4444", trailColor: "#333333" })}
                 >
                   <div className="text-center">
-                    <p className="text-xl font-bold">{stats.numberOfWorkouts} / {mockExercisePlan.length}</p>
+                    {/* 🔧 FIX: Show actual completed exercises count */}
+                    <p className="text-xl font-bold">{actualCompletedExercises} / {exercisePlan.length}</p>
                     <p className="text-xs text-gray-400">No. of<br />Exercises Finished</p>
                   </div>
                 </CircularProgressbarWithChildren>
@@ -276,7 +393,9 @@ export default function ProgressTracker() {
             </div>
             <div className="bg-lime-400 text-black text-sm p-3 rounded-xl">
               <p>Goal for today:</p>
-              <p className="font-semibold">Finish a Workout</p>
+              <p className="font-semibold">
+                {activeWorkout ? `Complete ${activeWorkout.title}` : 'Finish a Workout'}
+              </p>
             </div>
           </div>
 
@@ -291,7 +410,9 @@ export default function ProgressTracker() {
           </div>
 
           <div className="mb-6">
-            <h2 className="font-bold mb-2">Finished Exercises</h2>
+            <h2 className="font-bold mb-2">
+              {activeWorkout ? `${activeWorkout.title} - Exercises` : 'Finished Exercises'}
+            </h2>
             {sortedExercises.map((exercise, index) => (
               <div key={index} className="flex justify-between items-center bg-[#2a2a2a] p-3 mb-2 rounded">
                 <div>
@@ -303,6 +424,19 @@ export default function ProgressTracker() {
                 </button>
               </div>
             ))}
+            
+            {/* 🆕 NEW: No workout message */}
+            {exercisePlan.length === 0 && (
+              <div className="text-center py-8 bg-zinc-800 rounded-lg">
+                <p className="text-gray-400 mb-4">No active workout selected</p>
+                <button
+                  onClick={() => navigate('/workout-categories')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg kanit-medium transition-colors"
+                >
+                  Choose a Workout
+                </button>
+              </div>
+            )}
           </div>
 
           {showEditModal && (
@@ -311,13 +445,12 @@ export default function ProgressTracker() {
                 <h2 className="text-xl font-bold mb-4">Update Progress</h2>
                 {/* Only show backend fields */}
                 {[
-                  { key: "numberOfWorkouts", label: "Workouts" },
                   { key: "caloriesBurned", label: "Calories Burned" },
                   { key: "caloriesConsumed", label: "Calories Consumed" },
                   { key: "steps", label: "Steps" },
                   { key: "activeMinutes", label: "Active Minutes" },
                   { key: "averageHeartRate", label: "Avg Heart Rate" },
-                  // Add more as needed
+                  // 🔧 FIX: Removed numberOfWorkouts from manual edit since it's auto-calculated
                 ].map(({ key, label }) => (
                   <div key={key} className="mb-3">
                     <label className="block text-sm capitalize">{label}</label>
@@ -330,6 +463,15 @@ export default function ProgressTracker() {
                     />
                   </div>
                 ))}
+                
+                {/* 🔧 FIX: Show read-only workout count */}
+                <div className="mb-3">
+                  <label className="block text-sm text-gray-600">Workouts Completed (auto-calculated)</label>
+                  <div className="w-full border p-2 rounded bg-gray-100 text-gray-600">
+                    {actualCompletedExercises} / {exercisePlan.length} exercises
+                  </div>
+                </div>
+                
                 <div className="flex justify-between mt-4">
                   <button onClick={handleCancel} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
                   <button onClick={handleSave} className="bg-lime-500 px-4 py-2 rounded text-white">Save</button>

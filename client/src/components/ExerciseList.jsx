@@ -116,6 +116,102 @@ function ExerciseList() {
     return [];
   };
 
+  // 🆕 NEW: Handle Use Workout button click
+  // 🆕 NEW: Handle Use Workout button click
+const handleUseWorkout = async () => {
+  if (exercises.length === 0) {
+    alert('No exercises available to use as workout');
+    return;
+  }
+
+  // Create workout data with time slots
+  const timeSlots = ['10:00', '12:00', '15:00', '17:00', '19:00', '21:00'];
+  
+  const workoutData = {
+    title: categoryTitle,
+    category: category,
+    difficulty: difficulty,
+    environment: environment,
+    exercises: exercises.map((exercise, index) => ({
+      name: exercise.name,
+      time: timeSlots[index % timeSlots.length] // Cycle through time slots
+    })),
+    createdAt: new Date().toISOString()
+  };
+
+  // Save to localStorage (replace any existing workout)
+  localStorage.setItem('activeWorkout', JSON.stringify(workoutData));
+  
+  // 🔧 NEW: Reset progress tracker data for the new workout
+  try {
+    const token = localStorage.getItem('authToken');
+    
+    // Get current user ID
+    if (token) {
+      const [, payloadB64] = token.split('.');
+      const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+      const uid = payload.user_id || payload.sub;
+      
+      if (uid) {
+        // Get user's firebaseUid
+        const userRes = await fetch(`/api/users/firebase/${uid}`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          const userId = userData.firebaseUid;
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+          
+          // Check if there's existing progress for today
+          const existingRes = await fetch(
+            `/api/user-fitness-tracker/user/${userId}/date-range?startDate=${today}&endDate=${today}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          if (existingRes.ok) {
+            const existingData = await existingRes.json();
+            const existingEntry = Array.isArray(existingData) ? existingData[0] : existingData;
+            
+            if (existingEntry) {
+              // Reset progress: clear doneExercises and set numberOfWorkouts to 0
+              const resetPayload = {
+                userId: userId,
+                trackingDate: new Date().toISOString(),
+                numberOfWorkouts: 0, // 🔧 Reset to 0
+                caloriesBurned: existingEntry.caloriesBurned || 0,
+                caloriesConsumed: existingEntry.caloriesConsumed || 0,
+                steps: existingEntry.steps || 0,
+                activeMinutes: existingEntry.activeMinutes || 0,
+                averageHeartRate: existingEntry.averageHeartRate || 0,
+                doneExercises: [] // 🔧 Clear completed exercises
+              };
+              
+              // Update existing entry
+              await fetch(`/api/user-fitness-tracker/${existingEntry.id}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(resetPayload)
+              });
+              
+              console.log('🔄 Progress reset for new workout');
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error resetting progress:', error);
+    // Don't block the workout selection if progress reset fails
+  }
+  
+  console.log('🏋️ Workout saved:', workoutData);
+  
+  // Show confirmation and navigate
+  alert(`✅ "${categoryTitle}" workout has been set as your active workout! Progress has been reset.`);
+  navigate('/progress');
+};
+
   // Update the fetchExercises method to use the new endpoint:
   const fetchExercises = async () => {
     try {
@@ -174,6 +270,22 @@ function ExerciseList() {
           </button>
           <h1 className="text-xl font-bold kanit-bold mx-auto pr-8">{categoryTitle}</h1>
         </div>
+
+        {/* 🆕 NEW: Use Workout Button */}
+        {!loading && !error && exercises.length > 0 && (
+          <div className="px-7 mb-4">
+            <button
+              onClick={handleUseWorkout}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg kanit-medium transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              <span>📋</span>
+              Use This Workout ({exercises.length} exercises)
+            </button>
+            <p className="text-xs text-gray-400 text-center mt-2 kanit-light">
+              This will replace your current active workout and take you to the progress tracker
+            </p>
+          </div>
+        )}
 
         {/* Exercise list */}
         <div className="space-y-4 px-7 pb-24">

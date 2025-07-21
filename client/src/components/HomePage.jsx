@@ -10,6 +10,27 @@ const HomePage = () => {
   const [userName, setUserName] = useState('User');
   const [greeting, setGreeting] = useState('Good morning');
   const [currentDate, setCurrentDate] = useState('');
+  
+  // 🆕 NEW: State for workout categories
+  const [selectedDifficulty, setSelectedDifficulty] = useState(() => {
+    return localStorage.getItem('selectedDifficulty') || 'BEGINNER';
+  });
+  const [selectedEnvironment, setSelectedEnvironment] = useState(() => {
+    return localStorage.getItem('selectedEnvironment') || 'GYM';
+  });
+
+  // 🆕 NEW: State for real fitness stats
+  const [todayStats, setTodayStats] = useState({
+    numberOfWorkouts: 0,
+    caloriesBurned: 0,
+    steps: 0,
+    activeMinutes: 0,
+    totalExercises: 0,
+    completedExercises: 0
+  });
+  const [userId, setUserId] = useState(null);
+  const [activeWorkout, setActiveWorkout] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // Function to get time-based greeting
   const getGreeting = () => {
@@ -25,6 +46,181 @@ const HomePage = () => {
     const options = { weekday: 'short', day: 'numeric', month: 'short' };
     return date.toLocaleDateString('en-US', options);
   };
+
+  // 🔧 UPDATED: Load user ID and fetch stats with proper timing
+  useEffect(() => {
+    const loadUserAndStats = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const [, payloadB64] = token.split('.');
+        const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+        const uid = payload.user_id || payload.sub;
+        if (!uid) return;
+
+        const res = await fetch(`/api/users/firebase/${uid}`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        
+        if (res.ok) {
+          const userData = await res.json();
+          setUserId(userData.firebaseUid);
+          
+          // 🔧 FIX: Load workout first, then fetch stats
+          let currentWorkout = null;
+          try {
+            const savedWorkout = localStorage.getItem('activeWorkout');
+            if (savedWorkout) {
+              currentWorkout = JSON.parse(savedWorkout);
+            }
+          } catch (error) {
+            console.error('Error loading workout for stats:', error);
+          }
+          
+          // Fetch stats with workout data
+          fetchTodayStats(userData.firebaseUid, token, currentWorkout);
+        }
+      } catch (err) {
+        console.error('Failed to load user:', err);
+      }
+    };
+
+    loadUserAndStats();
+  }, []);
+
+  // 🆕 NEW: Load active workout from localStorage
+  useEffect(() => {
+    try {
+      const savedWorkout = localStorage.getItem('activeWorkout');
+      if (savedWorkout) {
+        const workoutData = JSON.parse(savedWorkout);
+        setActiveWorkout(workoutData);
+        console.log('🏋️ Loaded active workout on HomePage:', workoutData);
+      }
+    } catch (error) {
+      console.error('Error loading active workout:', error);
+    }
+  }, []);
+
+  // 🆕 NEW: Fetch today's fitness stats
+  const fetchTodayStats = async (userIdParam = null, tokenParam = null, workoutData = null) => {
+    const finalUserId = userIdParam || userId;
+    const token = tokenParam || localStorage.getItem('authToken');
+    
+    if (!finalUserId || !token) return;
+
+    setStatsLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      const res = await fetch(
+        `/api/user-fitness-tracker/user/${finalUserId}/date-range?startDate=${today}&endDate=${today}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const entry = Array.isArray(data) ? data[0] : data;
+        
+        if (entry) {
+          // Calculate exercise progress from workout data (parameter first, then state, then localStorage)
+          let currentWorkout = workoutData || activeWorkout;
+          if (!currentWorkout) {
+            try {
+              const savedWorkout = localStorage.getItem('activeWorkout');
+              if (savedWorkout) {
+                currentWorkout = JSON.parse(savedWorkout);
+              }
+            } catch (error) {
+              console.error('Error loading workout for stats:', error);
+            }
+          }
+          
+          const completedCount = (entry.doneExercises || []).length;
+          const totalCount = currentWorkout?.exercises?.length || 0;
+          
+          setTodayStats({
+            numberOfWorkouts: entry.numberOfWorkouts || 0,
+            caloriesBurned: entry.caloriesBurned || 0,
+            steps: entry.steps || 0,
+            activeMinutes: entry.activeMinutes || 0,
+            totalExercises: totalCount,
+            completedExercises: completedCount
+          });
+          
+          console.log('📊 Today\'s stats loaded:', {
+            workouts: entry.numberOfWorkouts,
+            calories: entry.caloriesBurned,
+            steps: entry.steps,
+            minutes: entry.activeMinutes,
+            exercises: `${completedCount}/${totalCount}`
+          });
+        } else {
+          // No data for today, use defaults but include workout info
+          let currentWorkout = workoutData || activeWorkout;
+          if (!currentWorkout) {
+            try {
+              const savedWorkout = localStorage.getItem('activeWorkout');
+              if (savedWorkout) {
+                currentWorkout = JSON.parse(savedWorkout);
+              }
+            } catch (error) {
+              console.error('Error loading workout for stats:', error);
+            }
+          }
+          
+          const totalCount = currentWorkout?.exercises?.length || 0;
+          setTodayStats({
+            numberOfWorkouts: 0,
+            caloriesBurned: 0,
+            steps: 0,
+            activeMinutes: 0,
+            totalExercises: totalCount,
+            completedExercises: 0
+          });
+        }
+      } else {
+        console.error('Failed to fetch stats:', res.status);
+      }
+    } catch (error) {
+      console.error('Error fetching today\'s stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // 🆕 NEW: Refresh stats when active workout changes
+  useEffect(() => {
+    if (userId && activeWorkout) {
+      fetchTodayStats();
+    }
+  }, [activeWorkout, userId]);
+
+  // 🆕 NEW: Listen for localStorage changes and page focus
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'activeWorkout' && userId) {
+        console.log('🔄 Active workout changed in localStorage, refreshing stats');
+        fetchTodayStats();
+      }
+    };
+
+    const handleFocus = () => {
+      if (userId) {
+        console.log('🔄 Page focused, refreshing stats');
+        fetchTodayStats();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [userId]);
 
   // Load user data on component mount
   useEffect(() => {
@@ -171,6 +367,12 @@ const HomePage = () => {
         console.log('firebaseUid:', localStorage.getItem('firebaseUid'));
         console.log('authToken:', localStorage.getItem('authToken'));
       };
+
+      // 🆕 NEW: Debug function for stats
+      window.refreshStats = () => {
+        console.log('🔄 Refreshing stats...');
+        fetchTodayStats();
+      };
     }
 
     // Update greeting every minute
@@ -274,16 +476,80 @@ const HomePage = () => {
     }
   };
 
-  // Sample categories array
-  const categories = [
-    { name: "Beginner", active: true },
-    { name: "Intermediate", active: false },
-    { name: "Advance", active: false },
-    { name: "HIIT", active: false },
-    { name: "Cardio", active: false },
-    { name: "Strength", active: false },
-    { name: "Mobility", active: false }
+  // 🆕 NEW: Category configurations from WorkoutCategories.jsx
+  const difficultyCategories = [
+    { 
+      key: 'BEGINNER', 
+      name: "Beginner", 
+      active: selectedDifficulty === 'BEGINNER',
+      color: 'bg-green-500 hover:bg-green-400'
+    },
+    { 
+      key: 'INTERMEDIATE', 
+      name: "Intermediate", 
+      active: selectedDifficulty === 'INTERMEDIATE',
+      color: 'bg-yellow-500 hover:bg-yellow-400'
+    },
+    { 
+      key: 'ADVANCED', 
+      name: "Advanced", 
+      active: selectedDifficulty === 'ADVANCED',
+      color: 'bg-red-500 hover:bg-red-400'
+    }
   ];
+
+  const environmentCategories = [
+    { 
+      key: 'GYM', 
+      name: "Gym", 
+      active: selectedEnvironment === 'GYM',
+      icon: '🏋️'
+    },
+    { 
+      key: 'BAKAL_GYM', 
+      name: "Bakal Gym", 
+      active: selectedEnvironment === 'BAKAL_GYM',
+      icon: '💪'
+    },
+    { 
+      key: 'HOME', 
+      name: "Home Workout", 
+      active: selectedEnvironment === 'HOME',
+      icon: '🏠'
+    }
+  ];
+
+  // 🆕 NEW: Handle category selection and navigation
+  const handleCategoryClick = (category) => {
+    if (difficultyCategories.some(c => c.key === category.key)) {
+      setSelectedDifficulty(category.key);
+      localStorage.setItem('selectedDifficulty', category.key);
+    } else {
+      setSelectedEnvironment(category.key);
+      localStorage.setItem('selectedEnvironment', category.key);
+    }
+    
+    // Navigate to workout categories with selected filters
+    navigate('/workout-categories', {
+      state: {
+        difficulty: difficultyCategories.some(c => c.key === category.key) ? category.key : selectedDifficulty,
+        environment: environmentCategories.some(c => c.key === category.key) ? category.key : selectedEnvironment
+      }
+    });
+  };
+
+  // 🆕 NEW: Handle workout card clicks - navigate to specific exercises
+  const handleWorkoutCardClick = (workoutType, category, title) => {
+    navigate('/exercises', {
+      state: {
+        category: category,
+        title: title,
+        difficulty: 'BEGINNER', // Always use beginner for homepage cards
+        environment: selectedEnvironment,
+        limit: 6
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -311,36 +577,33 @@ const HomePage = () => {
                   Ask Fitness Helper to have your own customized Fitness Programs!
                 </p>
               </div>
-
-              
             </div>
 
-            {/* Rest of your existing JSX remains the same */}
             {/* Main Content Area */}
             <div className="flex-1 px-4 sm:px-5 lg:px-8">
               <div className="lg:grid lg:grid-cols-12 lg:gap-8">
                 
                 {/* Left Column - Main Content */}
                 <div className="lg:col-span-8">
-                  {/* Current Workout Card */}
+                  {/* First Beginner Workout Card - Wake Up Call (Arms) */}
                   <div 
                     className="bg-zinc-900 rounded-lg sm:rounded-xl lg:rounded-2xl overflow-hidden mb-4 sm:mb-6 lg:mb-8 relative group cursor-pointer transition-transform hover:scale-[1.02] shadow-md"
-                    onClick={() => navigate('/exercises')}
+                    onClick={() => handleWorkoutCardClick('warmup', 'Arms', 'Wake Up Call')}
                   >
                     <div className="aspect-[16/9] sm:aspect-[2/1] md:aspect-[16/9] w-full relative">
                       <img 
-                        src="https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                        alt="Day 01 - Warm Up"
+                        src="https://images.unsplash.com/photo-1518609571773-39b7d303a87b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                        alt="Wake Up Call"
                         className="absolute w-full h-full object-cover"
                       />
                     </div>
                     <div className="absolute bottom-0 left-0 p-3 sm:p-4 lg:p-6 w-full bg-gradient-to-t from-black/90 to-transparent">
-                      <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold kanit-medium">Day 01 - Warm Up</h2>
-                      <p className="text-lime-500 kanit-regular text-xs sm:text-sm lg:text-base">| 07:00 - 08:00 AM</p>
+                      <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold kanit-medium">Wake Up Call</h2>
+                      <p className="text-lime-500 kanit-regular text-xs sm:text-sm lg:text-base">| Arms Exercises - Beginner</p>
                     </div>
                   </div>
 
-                  {/* Workout Categories Section */}
+                  {/* Workout Categories Section - UPDATED with real categories */}
                   <div className="mb-4 sm:mb-6 lg:mb-8">
                     <div className="flex justify-between items-center mb-2 sm:mb-3 lg:mb-4">
                       <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold kanit-medium">Workout Categories</h2>
@@ -352,38 +615,67 @@ const HomePage = () => {
                       </button>
                     </div>
                     
-                    {/* Category Pills */}
-                    <div className="flex flex-nowrap overflow-x-auto lg:flex-wrap lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide gap-2 -mx-1 px-1">
-                      {categories.map((category, index) => (
-                        <button 
-                          key={index}
-                          className={`px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 rounded-full ${
-                            category.active 
-                              ? 'bg-lime-500 text-black' 
-                              : 'bg-zinc-800 text-white hover:bg-zinc-700'
-                          } kanit-regular text-xs sm:text-sm lg:text-base whitespace-nowrap flex-shrink-0 transition-colors`}
-                        >
-                          {category.name}
-                        </button>
-                      ))}
+                    {/* Difficulty Category Pills */}
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-400 mb-2 kanit-light">Difficulty Level</p>
+                      <div className="flex flex-nowrap overflow-x-auto lg:flex-wrap lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide gap-2 -mx-1 px-1">
+                        {difficultyCategories.map((category, index) => (
+                          <button 
+                            key={index}
+                            onClick={() => handleCategoryClick(category)}
+                            className={`px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 rounded-full ${
+                              category.active 
+                                ? 'bg-lime-500 text-black' 
+                                : 'bg-zinc-800 text-white hover:bg-zinc-700'
+                            } kanit-regular text-xs sm:text-sm lg:text-base whitespace-nowrap flex-shrink-0 transition-colors`}
+                          >
+                            {category.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Environment Category Pills */}
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2 kanit-light">Workout Environment</p>
+                      <div className="flex flex-nowrap overflow-x-auto lg:flex-wrap lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide gap-2 -mx-1 px-1">
+                        {environmentCategories.map((category, index) => (
+                          <button 
+                            key={index}
+                            onClick={() => handleCategoryClick(category)}
+                            className={`px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 rounded-full ${
+                              category.active 
+                                ? 'bg-lime-500 text-black' 
+                                : 'bg-zinc-800 text-white hover:bg-zinc-700'
+                            } kanit-regular text-xs sm:text-sm lg:text-base whitespace-nowrap flex-shrink-0 transition-colors`}
+                          >
+                            <span className="mr-1">{category.icon}</span>
+                            {category.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Featured Workout */}
+                  {/* Second Beginner Workout Card - Full Body Goal Crusher */}
                   <div 
                     className="bg-zinc-900 rounded-lg sm:rounded-xl lg:rounded-2xl overflow-hidden mb-5 sm:mb-6 lg:mb-8 relative group cursor-pointer transition-transform hover:scale-[1.02] shadow-md"
-                    onClick={() => navigate('/workout-categories')}
+                    onClick={() => handleWorkoutCardClick('fullbody', 'Full Body', 'Full Body Goal Crusher')}
                   >
                     <div className="aspect-[16/9] sm:aspect-[2/1] md:aspect-[16/9] w-full relative">
                       <img 
-                        src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                        alt="Learn the Basic of Training"
+                        src="https://images.unsplash.com/photo-1584466977773-e625c37cdd50?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                        alt="Full Body Goal Crusher"
                         className="absolute w-full h-full object-cover"
                       />
+                      {/* PRO Badge */}
+                      <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                        <span className="px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded kanit-bold">PRO</span>
+                      </div>
                     </div>
                     <div className="absolute bottom-0 left-0 p-3 sm:p-4 lg:p-6 w-full bg-gradient-to-t from-black/90 to-transparent">
-                      <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold kanit-medium">Learn the Basic of Training</h2>
-                      <p className="text-lime-500 kanit-regular text-xs sm:text-sm lg:text-base">| 06 Workouts for Beginner</p>
+                      <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold kanit-medium">Full Body Goal Crusher</h2>
+                      <p className="text-lime-500 kanit-regular text-xs sm:text-sm lg:text-base">| Full Body Exercises - Beginner</p>
                     </div>
                   </div>
                 </div>
@@ -417,46 +709,117 @@ const HomePage = () => {
                     </div>
                   </div>
 
-                  {/* Mobile Quick Stats */}
-                  <div onClick={() => navigate('/progress')} className="lg:hidden bg-zinc-900 rounded-xl p-4 mb-6 shadow-md z-50">
-                    <h3 className="text-base font-bold kanit-medium mb-3">This Week</h3>
+                  {/* 🔧 UPDATED: Mobile Quick Stats with Real Data */}
+                  <div onClick={() => navigate('/progress')} className="lg:hidden bg-zinc-900 rounded-xl p-4 mb-6 shadow-md z-50 cursor-pointer hover:bg-zinc-800 transition-colors">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-base font-bold kanit-medium">Today's Progress</h3>
+                      {statsLoading && (
+                        <div className="w-4 h-4 border-2 border-lime-500 border-t-transparent rounded-full animate-spin"></div>
+                      )}
+                    </div>
+                    
+                    {/* Exercise Progress - Only show if there's an active workout */}
+                    {activeWorkout && (
+                      <div className="mb-3 p-2 bg-zinc-800 rounded-lg">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-gray-400">Current Workout</span>
+                          <span className="text-xs text-lime-500 font-semibold">
+                            {todayStats.completedExercises}/{todayStats.totalExercises}
+                          </span>
+                        </div>
+                        <p className="text-xs text-white truncate">{activeWorkout.title}</p>
+                        <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                          <div 
+                            className="bg-lime-500 h-1.5 rounded-full transition-all duration-300" 
+                            style={{ 
+                              width: `${todayStats.totalExercises > 0 ? (todayStats.completedExercises / todayStats.totalExercises) * 100 : 0}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-3 gap-2 text-sm">
                       <div className="flex flex-col items-center bg-zinc-800 rounded-lg p-2">
-                        <span className="text-gray-400 text-xs">Workouts</span>
-                        <span className="text-lime-500 font-semibold kanit-medium">4/5</span>
+                        <span className="text-gray-400 text-xs">Calories</span>
+                        <span className="text-lime-500 font-semibold kanit-medium">
+                          {todayStats.caloriesBurned.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex flex-col items-center bg-zinc-800 rounded-lg p-2">
-                        <span className="text-gray-400 text-xs">Calories</span>
-                        <span className="text-lime-500 font-semibold kanit-medium">1,240</span>
+                        <span className="text-gray-400 text-xs">Steps</span>
+                        <span className="text-lime-500 font-semibold kanit-medium">
+                          {todayStats.steps.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex flex-col items-center bg-zinc-800 rounded-lg p-2">
                         <span className="text-gray-400 text-xs">Minutes</span>
-                        <span className="text-lime-500 font-semibold kanit-medium">180</span>
+                        <span className="text-lime-500 font-semibold kanit-medium">
+                          {todayStats.activeMinutes}
+                        </span>
                       </div>
+                    </div>
+                    
+                    {/* Tap to view more indicator */}
+                    <div className="mt-2 text-center">
+                      <span className="text-xs text-gray-500">Tap to view full progress</span>
                     </div>
                   </div>
 
-                  {/* Desktop Content */}
-                  <div onClick={() => navigate('/progress')} className="hidden lg:block space-y-6">
-                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02]">
-                      <h3 className="text-lg font-bold kanit-medium mb-4">This Week</h3>
+                  {/* 🔧 UPDATED: Desktop Content with Real Data */}
+                  <div onClick={() => navigate('/progress')} className="hidden lg:block space-y-6 cursor-pointer">
+                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02] transition-transform">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold kanit-medium">Today's Progress</h3>
+                        {statsLoading && (
+                          <div className="w-5 h-5 border-2 border-lime-500 border-t-transparent rounded-full animate-spin"></div>
+                        )}
+                      </div>
+                      
+                      {/* Active Workout Progress */}
+                      {activeWorkout && (
+                        <div className="mb-4 p-3 bg-zinc-800 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-gray-400">Current Workout</span>
+                            <span className="text-sm text-lime-500 font-semibold">
+                              {todayStats.completedExercises}/{todayStats.totalExercises}
+                            </span>
+                          </div>
+                          <p className="text-sm text-white mb-2 truncate">{activeWorkout.title}</p>
+                          <div className="w-full bg-gray-700 rounded-full h-2">
+                            <div 
+                              className="bg-lime-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ 
+                                width: `${todayStats.totalExercises > 0 ? (todayStats.completedExercises / todayStats.totalExercises) * 100 : 0}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-gray-400 kanit-regular">Workouts</span>
-                          <span className="text-lime-500 font-semibold kanit-medium">4/5</span>
+                          <span className="text-gray-400 kanit-regular">Calories Burned</span>
+                          <span className="text-lime-500 font-semibold kanit-medium">
+                            {todayStats.caloriesBurned.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400 kanit-regular">Calories</span>
-                          <span className="text-lime-500 font-semibold kanit-medium">1,240</span>
+                          <span className="text-gray-400 kanit-regular">Steps</span>
+                          <span className="text-lime-500 font-semibold kanit-medium">
+                            {todayStats.steps.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400 kanit-regular">Minutes</span>
-                          <span className="text-lime-500 font-semibold kanit-medium">180</span>
+                          <span className="text-gray-400 kanit-regular">Active Minutes</span>
+                          <span className="text-lime-500 font-semibold kanit-medium">
+                            {todayStats.activeMinutes}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02]">
+                    <div className="bg-zinc-900 rounded-2xl p-6 shadow-md hover:scale-[1.02] transition-transform">
                       <h3 className="text-lg font-bold kanit-medium mb-4">Up Next</h3>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">
