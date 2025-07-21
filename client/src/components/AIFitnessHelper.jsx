@@ -2,16 +2,25 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "./BottonNav";
 import useAuthStore from '../store/authStore';
+import { userFinishedWorkoutAPI } from "../services/api";
 
 export default function FitnessChat() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, userId } = useAuthStore();
   
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [recommendedExercises, setRecommendedExercises] = useState([]);
+  
+  // Modal state for exercise instructions
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+
+  // 👈 Add these new state variables for workout logging
+  const [finishedExercises, setFinishedExercises] = useState(new Set());
+  const [submittingExercise, setSubmittingExercise] = useState(null);
 
   // Get API key from environment variables
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -186,6 +195,12 @@ export default function FitnessChat() {
       setIsLoadingProfile(false);
     }
   };
+
+  useEffect(() => {
+    if (userId) {
+      loadTodaysFinishedExercises();
+    }
+  }, [userId]);
 
   // Load user profile on component mount
   useEffect(() => {
@@ -411,45 +426,86 @@ const fetchRecommendedExercises = async () => {
 };
 // BETTER: Navigate and auto-open the specific exercise modal
 // BETTER: Navigate and auto-open the specific exercise modal
-// FIXED: Updated handleExerciseClick to use correct category mapping
+// FIXED: Updated handleExerciseClick to show instructions modal
 const handleExerciseClick = (exercise) => {
-  console.log('🏋️ Navigating to exercise:', exercise.name);
+  console.log('🏋️ Opening exercise instructions:', exercise.name);
   console.log('🔍 Exercise data:', exercise);
   
-  // Map muscle groups to the correct categories that your ExerciseList expects
-  const muscleGroupToCategoryMap = {
-    'Upper Back': 'Back',
-    'Triceps': 'Arms', 
-    'Biceps': 'Arms',
-    'Abs': 'Core',
-    'Quads': 'Legs',
-    'Glutes': 'Legs', 
-    'Delts': 'Shoulders',
-    'Cardiovascular System': 'Cardio'
-  };
+  setSelectedExercise(exercise);
+  setShowInstructionsModal(true);
+};
+
+// Close instructions modal
+const closeInstructionsModal = () => {
+  setShowInstructionsModal(false);
+  setSelectedExercise(null);
+};
+
+// Helper function to clean exercise description
+const cleanDescription = (description) => {
+  if (!description) return '';
+  return description
+    .replace(/Imported from exercise dataset\.?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Get instructions steps from exercise
+const getInstructionSteps = (exercise) => {
+  if (!exercise?.instructions?.steps) return [];
   
-  // Get the correct category for ExerciseList
-  const correctCategory = muscleGroupToCategoryMap[exercise.muscleGroup] || 'Arms';
+  // Handle both array and object format
+  if (Array.isArray(exercise.instructions.steps)) {
+    return exercise.instructions.steps;
+  } else if (typeof exercise.instructions.steps === 'object') {
+    // Convert object to array (keys as indices)
+    return Object.keys(exercise.instructions.steps)
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .map(key => exercise.instructions.steps[key]);
+  }
   
-  // Navigate to exercises page with correct parameters
-  navigate('/exercises', {
-    state: {
-      category: correctCategory, // Use mapped category instead of muscleGroup
-      title: `${correctCategory} Exercises`, // Use the correct category name
-      difficulty: exercise.difficulty?.toUpperCase() || userProfile.fitnessLevel.toUpperCase(),
-      environment: 'GYM',
-      limit: 6,
-      fromAI: true,
-      
-      // Add debug info
-      originalMuscleGroup: exercise.muscleGroup,
-      targetExercise: exercise.name,
-      
-      // Auto-open this specific exercise
-      autoOpenExercise: exercise,
-      highlightExercise: exercise.name
-    }
-  });
+  return [];
+};
+
+// Get exercise image placeholder
+const getExerciseImage = (exercise) => {
+  // Check if image exists and is NOT from broken ExerciseDB
+  const imageUrl = exercise.image || exercise.imageUrl || exercise.gifUrl || exercise.instructions?.[0];
+  
+  // Skip ExerciseDB URLs since they're broken (404s)
+  const isExerciseDbUrl = imageUrl && (imageUrl.includes('exercisedb.io') || imageUrl.includes('v2.exercisedb'));
+  
+  if (imageUrl && imageUrl.includes('http') && !isExerciseDbUrl) {
+    return imageUrl;
+  }
+  
+  // Use placeholders with guaranteed variety
+  const placeholderImages = [
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 0 - Abs workout
+    'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 1 - Upper body
+    'https://images.unsplash.com/photo-1574680096145-d05b474e2155?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 2 - Lower body
+    'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 3 - Cardio
+    'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 4 - Gym equipment
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 5 - Fitness
+  ];
+
+  // Use exercise name + index for consistent hashing
+  const exerciseName = exercise.name || 'exercise';
+  const exerciseId = exercise.id || exercise.firebaseId || 'default';
+  
+  // Create a hash from name + id
+  let hash = 0;
+  const combined = exerciseName + exerciseId;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  // Convert hash to positive number and select image
+  const imageIndex = Math.abs(hash) % placeholderImages.length;
+  
+  return placeholderImages[imageIndex];
 };
 
 // HELPER: Get category color for exercise badges
@@ -587,6 +643,107 @@ const getMuscleGroupImage = (muscleGroup, category) => {
     }
 
     return context.trim();
+  };
+
+  // Load today's finished exercises
+  const loadTodaysFinishedExercises = async () => {
+    if (!userId) return;
+    
+    try {
+      const data = await userFinishedWorkoutAPI.getFinishedWorkoutsByUser(userId);
+      
+      // Get today's date in local timezone
+      const today = new Date();
+      const todayDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      // Filter workouts completed today
+      const todaysWorkouts = data.filter(workout => {
+        if (workout.createdAt?.seconds) {
+          // Firestore timestamp format
+          const workoutDate = new Date(workout.createdAt.seconds * 1000);
+          const workoutDateString = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
+          return workoutDateString === todayDateString;
+        }
+        return false;
+      });
+      
+      const completedExerciseNames = new Set(todaysWorkouts.map(workout => workout.workoutName));
+      setFinishedExercises(completedExerciseNames);
+    } catch (error) {
+      console.error('Failed to load finished exercises:', error);
+    }
+  };
+
+  // Function to calculate calories for an exercise
+  const calculateExerciseCalories = (exercise) => {
+    const sets = exercise.defaultSets || 3;
+    const reps = exercise.defaultReps || 10;
+    const caloriesPerRep = exercise.caloriesPerRep || 0.5; // Default fallback
+    
+    // Primary calculation: caloriesPerRep × reps × sets
+    if (exercise.caloriesPerRep && reps && sets) {
+      return Math.round(caloriesPerRep * reps * sets);
+    }
+    
+    // Fallback: caloriesPerMinute × duration (if available)
+    if (exercise.caloriesPerMinute && exercise.durationSeconds) {
+      const minutes = exercise.durationSeconds / 60;
+      return Math.round(exercise.caloriesPerMinute * minutes);
+    }
+    
+    // Final fallback: estimated calories
+    return Math.round(sets * reps * 0.5);
+  };
+
+  // Function to mark an exercise as completed
+  const markExerciseAsCompleted = async (exercise, event) => {
+    event?.stopPropagation();
+    
+    if (!userId || finishedExercises.has(exercise.name) || submittingExercise === exercise.name) {
+      return;
+    }
+    
+    try {
+      setSubmittingExercise(exercise.name);
+      console.log('🏋️ Logging exercise with fixed structure:', exercise.name);
+      
+      // Calculate calories and duration
+      const calculatedCalories = calculateExerciseCalories(exercise);
+      const estimatedDuration = exercise.durationSeconds ? Math.round(exercise.durationSeconds / 60) : 
+                              (exercise.defaultSets || 3) * 2; // 2 minutes per set estimate
+      
+      // Convert difficulty to integer
+      const difficultyMap = { 'beginner': 1, 'intermediate': 2, 'advanced': 3 };
+      const difficultyInt = difficultyMap[exercise.difficulty?.toLowerCase()] || 1;
+      
+      const workoutData = {
+        userId: userId,
+        workoutId: exercise.id || exercise.firebaseId || null,
+        workoutName: exercise.name,
+        workoutDescription: exercise.description || null,
+        caloriesBurned: calculatedCalories,
+        durationMinutes: estimatedDuration,
+        averageHeartRate: null,
+        difficulty: difficultyInt,
+        userRating: null,
+        notes: `Logged from AI Fitness Helper - ${exercise.muscleGroup || 'Unknown'} exercise`
+      };
+      
+      console.log('📤 Sending workout data:', workoutData);
+      
+      const result = await userFinishedWorkoutAPI.recordFinishedWorkout(workoutData);
+      console.log('✅ Exercise logged successfully:', result);
+      
+      // Update finished exercises and reload today's list
+      setFinishedExercises(prev => new Set([...prev, exercise.name]));
+      await loadTodaysFinishedExercises();
+      
+    } catch (error) {
+      console.error('❌ Error logging exercise:', error);
+      alert('Failed to log exercise. Please try again.');
+    } finally {
+      setSubmittingExercise(null);
+    }
   };
 
   // ENHANCED: Gemini AI Response function with comprehensive user context
@@ -1316,7 +1473,7 @@ Respond as TrainerAI:`
               </h2>
               
               {/* Exercise Stats */}
-              <div className="flex items-center justify-between text-xs text-gray-300">
+             <div className="flex items-center justify-between text-xs text-gray-300">
                 <div className="flex items-center space-x-2">
                   <span className="text-lime-500">
                     {exercise.muscleGroup || 'Full Body'}
@@ -1337,7 +1494,7 @@ Respond as TrainerAI:`
                     <span className="text-yellow-400">{exercise.averageRating.toFixed(1)}</span>
                   </div>
                 )}
-              </div>
+              </div> 
             </div>
           </div>
         ))}
@@ -1416,6 +1573,138 @@ Respond as TrainerAI:`
       </div>
 
       <BottomNav />
+
+      {/* Instructions Modal */}
+      {showInstructionsModal && selectedExercise && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-zinc-900 p-6 border-b border-zinc-700 flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-white kanit-bold">{selectedExercise.name}</h2>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs bg-lime-500 text-black px-2 py-1 rounded kanit-regular">
+                    {selectedExercise.difficulty}
+                  </span>
+                  <span className="text-xs bg-zinc-800 text-white px-2 py-1 rounded kanit-light">
+                    {selectedExercise.muscleGroup}
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={closeInstructionsModal}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {/* Exercise Image */}
+              <div className="w-full h-48 mb-6">
+                <img 
+                  src={getExerciseImage(selectedExercise)}
+                  alt={selectedExercise.name}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+
+              {/* Description */}
+              {selectedExercise.description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white kanit-medium mb-3">Description</h3>
+                  <p className="text-gray-300 kanit-light leading-relaxed">
+                    {cleanDescription(selectedExercise.description)}
+                  </p>
+                </div>
+              )}
+
+              {/* Step-by-step Instructions */}
+              <div>
+                <h3 className="text-lg font-semibold text-white kanit-medium mb-4">
+                  📋 Step-by-Step Instructions
+                </h3>
+                
+                {getInstructionSteps(selectedExercise).length > 0 ? (
+                  <div className="space-y-4">
+                    {getInstructionSteps(selectedExercise).map((step, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 bg-zinc-800 rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 bg-lime-500 text-black rounded-full flex items-center justify-center text-sm font-bold kanit-bold">
+                          {index + 1}
+                        </div>
+                        <p className="text-gray-200 kanit-light leading-relaxed flex-1">
+                          {step}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400 kanit-light">
+                      No step-by-step instructions available for this exercise.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Equipment Required */}
+              {selectedExercise.equipment && (
+                <div className="mt-6 p-4 bg-zinc-800 rounded-lg">
+                  <h4 className="text-sm font-semibold text-white kanit-medium mb-2">Equipment Required</h4>
+                  <span className="text-gray-300 kanit-light text-sm">
+                    {selectedExercise.equipment}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-zinc-900 p-6 border-t border-zinc-700">
+              <div className="flex gap-3">
+                {/* Log It Button - NEW */}
+                {userId && (
+                  <div className="flex-1">
+                    {finishedExercises.has(selectedExercise.name) ? (
+                      <button className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold kanit-medium flex items-center justify-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Exercise Completed Today!
+                      </button>
+                    ) : submittingExercise === selectedExercise.name ? (
+                      <button disabled className="w-full bg-yellow-600 text-white py-3 rounded-lg font-semibold kanit-medium flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Logging Exercise...
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => markExerciseAsCompleted(selectedExercise, e)}
+                        className="w-full bg-lime-500 text-black py-3 rounded-lg font-semibold kanit-medium hover:bg-lime-400 transition-colors flex items-center justify-center"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                        Log This Exercise
+                      </button>
+                    )}
+                  </div>
+                )}
+                
+                {/* Close Button */}
+                <button 
+                  onClick={closeInstructionsModal}
+                  className="bg-zinc-700 text-white py-3 px-6 rounded-lg font-semibold kanit-medium hover:bg-zinc-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

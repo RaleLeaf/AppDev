@@ -21,11 +21,11 @@ function ExerciseList() {
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
 
   // Get category from navigation state or default to all
-  const category = location.state?.category || 'Arms';
+  const category = location.state?.category || 'All';
   const categoryTitle = location.state?.title || 'All Exercises';
   const difficulty = location.state?.difficulty || 'BEGINNER'; // Default to BEGINNER
   const environment = location.state?.environment || 'GYM'; // 🏋️ NEW: Get environment
-  const limit = location.state?.limit || 6;
+  const limit = location.state?.limit || 50;
 
   useEffect(() => {
     if (userId) {
@@ -140,14 +140,24 @@ function ExerciseList() {
     return [];
   };
 
-  // Update the fetchExercises method to use the new endpoint:
+  // Update the fetchExercises method to handle "all" category:
   const fetchExercises = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
 
-      // 🏋️ NEW: Add environment parameter to API call
-      const url = `http://localhost:8080/api/exercises/workout-category/${category}?limit=${limit}&difficulty=${difficulty}&environment=${environment}`;
+      let url;
+      
+      // 🆕 NEW: Handle "all" category to fetch all exercises
+      if (category.toLowerCase() === 'all') {
+        // Fetch all exercises with difficulty and environment filters
+        url = `http://localhost:8080/api/exercises?limit=${limit}&difficulty=${difficulty}&environment=${environment}`;
+      } else {
+        // Fetch exercises by specific category
+        url = `http://localhost:8080/api/exercises/workout-category/${category}?limit=${limit}&difficulty=${difficulty}&environment=${environment}`;
+      }
+
+      console.log('🔍 Fetching exercises from URL:', url); // Debug log
 
       const response = await fetch(url, {
         headers: {
