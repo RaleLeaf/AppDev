@@ -4,9 +4,13 @@ import { useNavigate } from 'react-router-dom';
 export default function ChatBubble() {
   const navigate = useNavigate();
 
-  const initialPos = { x: window.innerWidth - 70, y: window.innerHeight - 125 };
+  // FIXED: Adjusted initial position to avoid BottomNav (which is 56px/14rem high)
+  const getInitialPosition = () => ({
+    x: window.innerWidth - 70,
+    y: window.innerHeight - 140 // Increased from 125 to 140 to clear BottomNav
+  });
 
-  const [position, setPosition] = useState(initialPos);
+  const [position, setPosition] = useState(getInitialPosition());
   const [dragging, setDragging] = useState(false);
   const [rel, setRel] = useState({ x: 0, y: 0 });
 
@@ -14,13 +18,14 @@ export default function ChatBubble() {
     function handleResize() {
       setPosition({
         x: window.innerWidth - 70,
-        y: window.innerHeight - 70,
+        y: window.innerHeight - 140, // FIXED: Avoid BottomNav area
       });
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Mouse events (for desktop)
   function onMouseDown(e) {
     if (e.button !== 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -35,9 +40,20 @@ export default function ChatBubble() {
 
   function onMouseMove(e) {
     if (!dragging) return;
+    
+    // ADDED: Constrain position to avoid BottomNav on mobile
+    let newY = e.pageY - rel.y;
+    const bottomNavHeight = 56; // BottomNav height (h-14 = 56px)
+    const maxY = window.innerHeight - bottomNavHeight - 56 - 16; // Bubble height + padding
+    
+    // Only apply constraint on mobile/tablet screens
+    if (window.innerWidth < 768) { // md breakpoint
+      newY = Math.min(newY, maxY);
+    }
+    
     setPosition({
       x: e.pageX - rel.x,
-      y: e.pageY - rel.y,
+      y: newY,
     });
     e.stopPropagation();
     e.preventDefault();
@@ -49,6 +65,7 @@ export default function ChatBubble() {
     e.preventDefault();
   }
 
+  // FIXED: Touch events with proper passive handling and position constraints
   function onTouchStart(e) {
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
@@ -58,22 +75,32 @@ export default function ChatBubble() {
       y: touch.pageY - rect.top,
     });
     e.stopPropagation();
-    e.preventDefault();
   }
+
   function onTouchMove(e) {
     if (!dragging) return;
     const touch = e.touches[0];
+    
+    // ADDED: Constrain position to avoid BottomNav on mobile
+    let newY = touch.pageY - rel.y;
+    const bottomNavHeight = 56; // BottomNav height (h-14 = 56px)
+    const maxY = window.innerHeight - bottomNavHeight - 56 - 16; // Bubble height + padding
+    
+    // Only apply constraint on mobile/tablet screens
+    if (window.innerWidth < 768) { // md breakpoint
+      newY = Math.min(newY, maxY);
+    }
+    
     setPosition({
       x: touch.pageX - rel.x,
-      y: touch.pageY - rel.y,
+      y: newY,
     });
     e.stopPropagation();
-    e.preventDefault();
   }
+
   function onTouchEnd(e) {
     setDragging(false);
     e.stopPropagation();
-    e.preventDefault();
   }
 
   // Click handler: navigate to /ai-helper only if NOT dragging
@@ -97,6 +124,10 @@ export default function ChatBubble() {
         justifyContent: 'center',
         alignItems: 'center',
         userSelect: 'none',
+        // ADDED: Prevent text selection and improve touch handling
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        touchAction: 'none', // This helps with dragging on touch devices
       }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}

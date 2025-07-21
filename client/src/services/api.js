@@ -1,8 +1,12 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore'; // Corrected: Import the default export
 import authService from './authService';
 
+const API_URL = 'http://localhost:8080/';
+
+// Create a new Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.DEV ? '' : (import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8080/'),
+  baseURL: import.meta.env.VITE_BACKEND_API_URL || API_URL,
   timeout: 30000, // 30 seconds timeout for better reliability
   headers: {
     'Content-Type': 'application/json',
@@ -22,34 +26,29 @@ if (import.meta.env.DEV) {
 
 // Request interceptor for adding auth token
 api.interceptors.request.use(
-  async (config) => {
-    try {
-      // Ensure Content-Type is set for all requests
-      if (!config.headers['Content-Type']) {
-        config.headers['Content-Type'] = 'application/json';
-      }
-      
-      // Get fresh token for each request
-      const token = await authService.getIdToken();
-      if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Add CORS headers
-      config.headers['Access-Control-Allow-Origin'] = '*';
-      
-      // Log request details in development
-      if (import.meta.env.DEV) {
-        const fullUrl = config.baseURL ? config.baseURL + config.url : config.url;
-        console.log(`🚀 ${config.method?.toUpperCase()} ${fullUrl}`, {
-          baseURL: config.baseURL || '(using Vite proxy)',
-          relativePath: config.url,
-          headers: config.headers,
-          data: config.data
-        });
-      }
-    } catch (error) {
-      console.error('Error in request interceptor:', error);
+  (config) => {
+    const token = useAuthStore.getState().token; // Directly use the store
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Ensure Content-Type is set for all requests
+    if (!config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    // Remove this line - don't set CORS headers from client side!
+    // config.headers['Access-Control-Allow-Origin'] = '*';
+    
+    // Log request details in development
+    if (import.meta.env.DEV) {
+      const fullUrl = config.baseURL ? config.baseURL + config.url : config.url;
+      console.log(`🚀 ${config.method?.toUpperCase()} ${fullUrl}`, {
+        baseURL: config.baseURL || '(using Vite proxy)',
+        relativePath: config.url,
+        headers: config.headers,
+        data: config.data
+      });
     }
     return config;
   },
@@ -207,16 +206,8 @@ export const commentAPI = {
   },
   updateCommentUserInfo: async (commentId, userInfo) => {
     try {
-      const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`${API_BASE_URL}/comments/${commentId}/user-info`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userInfo),
-      });
-      return response.ok;
+      const response = await api.put(`/api/comments/${commentId}/user-info`, userInfo);
+      return response.status === 200;
     } catch (error) {
       console.error('Error updating comment user info:', error);
       return false;
@@ -261,7 +252,38 @@ export const commentAPI = {
   }
 };
 
-// User Profile API functions
+// 🆕 NEW: API for User Finished Workouts
+export const userFinishedWorkoutAPI = {
+  getFinishedWorkoutsByUser: async (userId) => {
+    try {
+      const response = await api.get(`/api/user-finished-workouts/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching finished workouts:', error);
+      throw error;
+    }
+  },
+  recordFinishedWorkout: async (workoutData) => {
+    try {
+      const response = await api.post('/api/user-finished-workouts', workoutData);
+      return response.data;
+    } catch (error) {
+      console.error('Error recording finished workout:', error);
+      throw error;
+    }
+  },
+  deleteFinishedWorkout: async (workoutId) => {
+    try {
+      const response = await api.delete(`/api/user-finished-workouts/${workoutId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting finished workout:', error);
+      throw error;
+    }
+  },
+};
+
+// API for user profiles
 export const userProfileAPI = {
   // Get user profile
   getUserProfile: async (userId) => {

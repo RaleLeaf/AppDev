@@ -2,6 +2,7 @@ package com.basick.app.repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -62,7 +63,7 @@ public class ExerciseRepository {
     // 🏋️ NEW: Helper method to filter exercises by environment
     private boolean isExerciseValidForEnvironment(Exercise exercise, String environment) {
         List<String> equipmentRequired = exercise.getEquipmentRequired();
-        
+
         if (equipmentRequired == null || equipmentRequired.isEmpty()) {
             // If no equipment specified, assume it's bodyweight
             return true;
@@ -71,19 +72,19 @@ public class ExerciseRepository {
         switch (environment.toUpperCase()) {
             case "HOME":
                 // Home workout: only bodyweight and bands
-                return equipmentRequired.stream().allMatch(equipment -> 
-                    equipment.toUpperCase().contains("BODY_WEIGHT") || 
+                return equipmentRequired.stream().allMatch(equipment ->
+                    equipment.toUpperCase().contains("BODY_WEIGHT") ||
                     equipment.toUpperCase().contains("BAND") ||
                     equipment.toUpperCase().contains("RESISTANCE_BAND")
                 );
-                
+
             case "BAKAL_GYM":
                 // Bakal gym: exclude machines and cables
-                return equipmentRequired.stream().noneMatch(equipment -> 
-                    equipment.toUpperCase().contains("MACHINE") || 
+                return equipmentRequired.stream().noneMatch(equipment ->
+                    equipment.toUpperCase().contains("MACHINE") ||
                     equipment.toUpperCase().contains("CABLE")
                 );
-                
+
             case "GYM":
             default:
                 // Full gym: include all exercises
@@ -385,5 +386,30 @@ public class ExerciseRepository {
             e.printStackTrace();
             throw new RuntimeException("Error finding exercises by workout category, difficulty and environment: " + workoutCategory + ", " + difficulty + ", " + environment, e);
         }
+    }
+
+    /**
+     * Get all existing exercise names (for duplicate checking during import)
+     */
+    public Set<String> getAllExerciseNames() {
+        try {
+            List<Exercise> allExercises = firestoreService.findAll(COLLECTION_NAME, Exercise.class);
+            return allExercises.stream()
+                    .map(Exercise::getName)
+                    .filter(name -> name != null)
+                    .map(name -> name.toLowerCase().trim())
+                    .collect(Collectors.toSet());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error getting exercise names", e);
+        }
+    }
+
+    /**
+     * Check if an exercise with the given name already exists
+     */
+    public boolean existsByName(String name) {
+        if (name == null) return false;
+        String normalizedName = name.toLowerCase().trim();
+        return getAllExerciseNames().contains(normalizedName);
     }
 }

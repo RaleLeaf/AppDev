@@ -24,38 +24,32 @@ export const useUser = () => {
 
   // Follow a user
   const followUser = async (targetUserId) => {
-    if (!user?.id) throw new Error('User not authenticated');
-    return handleOperation(() => userService.followUser(user.id, targetUserId));
+    return handleOperation(() => userService.followUser(targetUserId));
   };
 
   // Unfollow a user
   const unfollowUser = async (targetUserId) => {
-    if (!user?.id) throw new Error('User not authenticated');
-    return handleOperation(() => userService.unfollowUser(user.id, targetUserId));
+    return handleOperation(() => userService.unfollowUser(targetUserId));
   };
 
   // Block a user
   const blockUser = async (targetUserId) => {
-    if (!user?.id) throw new Error('User not authenticated');
-    return handleOperation(() => userService.blockUser(user.id, targetUserId));
+    return handleOperation(() => userService.blockUser(targetUserId));
   };
 
   // Unblock a user
   const unblockUser = async (targetUserId) => {
-    if (!user?.id) throw new Error('User not authenticated');
-    return handleOperation(() => userService.unblockUser(user.id, targetUserId));
+    return handleOperation(() => userService.unblockUser(targetUserId));
   };
 
-  // Get user followers
-  const getFollowers = async (userId = user?.id) => {
-    if (!userId) throw new Error('User ID required');
-    return handleOperation(() => userService.getUserFollowers(userId));
+  // Get current user's followers
+  const getFollowers = async () => {
+    return handleOperation(() => userService.getMyFollowers());
   };
 
-  // Get user following
-  const getFollowing = async (userId = user?.id) => {
-    if (!userId) throw new Error('User ID required');
-    return handleOperation(() => userService.getUserFollowing(userId));
+  // Get current user's following
+  const getFollowing = async () => {
+    return handleOperation(() => userService.getMyFollowing());
   };
 
   // Search users
@@ -65,17 +59,32 @@ export const useUser = () => {
 
   // Update current user
   const updateCurrentUser = async (userData) => {
-    if (!user?.id) throw new Error('User not authenticated');
-    const result = await handleOperation(() => userService.updateUser(user.id, userData));
+    const { userId } = useAuthStore.getState();
+    if (!userId) throw new Error('User not authenticated');
+    
+    // Check if userData contains profile fields
+    const profileFields = ['gender', 'dateOfBirth', 'weight', 'height', 'fitnessLevel', 'preferences'];
+    const hasProfileFields = profileFields.some(field => Object.prototype.hasOwnProperty.call(userData, field));
+    
+    let result;
+    if (hasProfileFields) {
+      // Use profile update endpoint for profile-specific fields (no userId needed - uses store)
+      result = await handleOperation(() => userService.updateUserProfile(userData));
+    } else {
+      // Use regular user update endpoint for basic user fields
+      result = await handleOperation(() => userService.updateUser(userId, userData));
+    }
+    
     updateUser(result);
     return result;
   };
 
   // Update notification preferences
   const updateNotificationPreferences = async (preferences) => {
-    if (!user?.id) throw new Error('User not authenticated');
+    const { userId } = useAuthStore.getState();
+    if (!userId) throw new Error('User not authenticated');
     const result = await handleOperation(() => 
-      userService.updateNotificationPreferences(user.id, preferences)
+      userService.updateNotificationPreferences(userId, preferences)
     );
     updateUser(result);
     return result;

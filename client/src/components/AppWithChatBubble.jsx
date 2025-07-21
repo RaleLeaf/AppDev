@@ -30,13 +30,16 @@ import LastLoginDebugger from './dev/LastLoginDebugger.jsx';
 import UserIdTest from './dev/UserIdTest.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import PublicRoute from './PublicRoute.jsx';
+import useAuthStore from '../store/authStore';
 
 function AppWithChatBubble() {
   const location = useLocation();
+  const { isLoading } = useAuthStore();
   const normalizedPath = location.pathname.toLowerCase().replace(/\/$/, '');
-  const hiddenPaths = ['/login', '/signup', '/splash','/ai-helper','/user-details','','/'];
+  const hiddenPaths = ['/login', '/signup', '/splash', '/ai-helper', '/user-details', '/profile', '/settings', '', '/', 'edit-profile'];
 
-  const showChatBubble = !hiddenPaths.includes(normalizedPath);
+  // Hide chat bubble during loading states or on specific pages
+  const showChatBubble = !isLoading && !hiddenPaths.includes(normalizedPath);
 
   return (
     <>
