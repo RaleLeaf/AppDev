@@ -26,8 +26,7 @@ const AddFood = () => {
 
   // Updated food categories to match your backend data
   const categories = [
-    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT', 'FRUITS', 'VEGETABLES', 
-    'GRAINS', 'NUTS', 'BEVERAGES', 'SNACKS', 'OILS', 'SPICES'
+    'DAIRY', 'SWEETENERS', 'OTHER', 'MEAT'
   ];
 
   // Get auth token
@@ -41,33 +40,33 @@ const AddFood = () => {
 
   // Convert backend Food to frontend format
   const convertFoodToFrontendFormat = (backendFood) => {
-    return {
-      id: backendFood.id,
-      name: backendFood.name,
-      brand: backendFood.brand,
-      barcode: backendFood.barcode,
-      category: backendFood.category,
-      subcategory: backendFood.subcategory,
-      serving: "100g",
-      calories: Math.round(backendFood.caloriesPer100g || 0),
-      protein: Math.round(backendFood.proteinPer100g || 0),
-      carbs: Math.round(backendFood.carbsPer100g || 0),
-      fat: Math.round(backendFood.fatsPer100g || 0),
-      fiber: Math.round(backendFood.fiberPer100g || 0),
-      sugar: Math.round(backendFood.sugarPer100g || 0),
-      sodium: Math.round(backendFood.sodiumPer100g || 0),
-      isVerified: backendFood.isVerified,
-      usageCount: backendFood.usageCount,
-      servingSizes: backendFood.servingSizes,
-      imageUrl: backendFood.imageUrl,
-      description: backendFood.description,
-      isVegan: backendFood.isVegan,
-      isVegetarian: backendFood.isVegetarian,
-      isGlutenFree: backendFood.isGlutenFree,
-      createdAt: backendFood.createdAt,
-      updatedAt: backendFood.updatedAt
-    };
+  return {
+    id: backendFood.id,
+    name: backendFood.name,
+    brand: backendFood.brand,
+    barcode: backendFood.barcode,
+    category: backendFood.category,
+    subcategory: backendFood.subcategory,
+    serving: "100g",
+    calories: Math.round(backendFood.caloriesPer100g || 0),
+    protein: Math.round(backendFood.proteinPer100g || 0),
+    carbs: Math.round(backendFood.carbsPer100g || 0),
+    fat: Math.round(backendFood.fatsPer100g || backendFood.fatPer100g || 0), // FIXED: Handle both possible field names
+    fiber: Math.round(backendFood.fiberPer100g || 0),
+    sugar: Math.round(backendFood.sugarPer100g || 0),
+    sodium: Math.round(backendFood.sodiumPer100g || 0),
+    isVerified: backendFood.isVerified,
+    usageCount: backendFood.usageCount,
+    servingSizes: backendFood.servingSizes,
+    imageUrl: backendFood.imageUrl,
+    description: backendFood.description,
+    isVegan: backendFood.isVegan,
+    isVegetarian: backendFood.isVegetarian,
+    isGlutenFree: backendFood.isGlutenFree,
+    createdAt: backendFood.createdAt,
+    updatedAt: backendFood.updatedAt
   };
+};
 
   // Handle food created callback
   const handleFoodCreated = (newFood) => {
@@ -313,79 +312,80 @@ const AddFood = () => {
     }
   };
 
-  // Add food to log
-  const addFoodToLog = async (food, customQuantity = 1, customUnit = '100g') => {
-    const authToken = getAuthToken();
-    if (!authToken || !user?.uid) {
-      setError('Authentication required');
-      return;
-    }
+  // UPDATED: Add food to log with grams calculation
+  const addFoodToLog = async (food, grams = 100) => {
+  const authToken = getAuthToken();
+  if (!authToken || !user?.uid) {
+    setError('Authentication required');
+    return;
+  }
 
-    try {
-      setLoading(true);
-      
-      // Calculate nutritional values based on quantity
-      const multiplier = customQuantity;
-      const calories = Math.round((food.calories || 0) * multiplier);
-      const protein = Math.round((food.protein || 0) * multiplier);
-      const carbs = Math.round((food.carbs || 0) * multiplier);
-      const fat = Math.round((food.fat || 0) * multiplier);
+  try {
+    setLoading(true);
+    
+    // Calculate nutritional values based on grams from per 100g values
+    const calculateNutrition = (per100gValue, grams) => {
+      return Math.round((per100gValue || 0) * (grams / 100));
+    };
 
-      const logEntry = {
-        userId: user.uid,
-        foodId: food.id,
-        foodName: food.name,
-        mealType: selectedMeal.toUpperCase(),
-        quantity: customQuantity,
-        unit: customUnit,
-        calories: calories,
-        protein: protein,
-        carbs: carbs,
-        fat: fat,
-        fiber: Math.round((food.fiber || 0) * multiplier),
-        sugar: Math.round((food.sugar || 0) * multiplier),
-        sodium: Math.round((food.sodium || 0) * multiplier),
-        consumedAt: new Date().toISOString(),
-        loggedAt: new Date().toISOString(),
-        isHomemade: false,
-        brand: food.brand || null,
-        barcode: food.barcode || null
-      };
+    const logEntry = {
+      userId: user.uid,
+      foodId: food.id,
+      foodName: food.name,
+      mealType: selectedMeal.toUpperCase(),
+      quantity: grams,
+      unit: 'grams',
+      calories: calculateNutrition(food.calories, grams),
+      protein: calculateNutrition(food.protein, grams),
+      carbs: calculateNutrition(food.carbs, grams),
+      fats: calculateNutrition(food.fat, grams), // CHANGED: fat -> fats to match backend
+      fiber: calculateNutrition(food.fiber, grams),
+      sugar: calculateNutrition(food.sugar, grams),
+      sodium: calculateNutrition(food.sodium, grams),
+      consumedAt: new Date().toISOString(),
+      loggedAt: new Date().toISOString(),
+      isHomemade: false,
+      brand: food.brand || null,
+      barcode: food.barcode || null
+    };
 
-      const response = await fetch('http://localhost:8080/api/food-logs', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(logEntry)
-      });
+    console.log('Logging food entry:', logEntry); // DEBUG: Check what we're sending
 
-      if (response.ok || response.status === 201) {
-        // Try to increment usage count
-        try {
-          await fetch(`http://localhost:8080/api/foods/${food.id}/increment-usage`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-          });
-        } catch (error) {
-          // Silent fail for usage count increment
-        }
-        
-        navigate('/macros');
-      } else {
-        const errorText = await response.text();
-        setError(`Failed to log food: ${response.status} - ${errorText}`);
+    const response = await fetch('http://localhost:8080/api/food-logs', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(logEntry)
+    });
+
+    if (response.ok || response.status === 201) {
+      // Try to increment usage count
+      try {
+        await fetch(`http://localhost:8080/api/foods/${food.id}/increment-usage`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (error) {
+        // Silent fail for usage count increment
       }
-    } catch (error) {
-      setError(`Error logging food: ${error.message}`);
-    } finally {
-      setLoading(false);
+      
+      navigate('/macros');
+    } else {
+      const errorText = await response.text();
+      setError(`Failed to log food: ${response.status} - ${errorText}`);
     }
-  };
+  } catch (error) {
+    setError(`Error logging food: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Handle search input change with debouncing
   const handleSearchChange = (e) => {
@@ -465,7 +465,6 @@ const AddFood = () => {
 
             {/* Action Buttons */}
             <div className="px-3 sm:px-5 mb-4 flex flex-col sm:flex-row flex-wrap gap-2">
-            
               <button 
                 onClick={() => setShowCreateFoodModal(true)}
                 className="bg-lime-600 hover:bg-lime-700 text-black px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors font-semibold"
@@ -643,13 +642,17 @@ const AddFood = () => {
   );
 };
 
-// Food item component
+// UPDATED: Food item component with grams input
 const FoodItem = ({ food, onAdd, disabled }) => {
-  const [quantity, setQuantity] = useState(1);
-  const [unit, setUnit] = useState('100g');
+  const [grams, setGrams] = useState(100); // Changed from quantity to grams
 
   const handleAdd = () => {
-    onAdd(food, quantity, unit);
+    onAdd(food, grams); // Pass grams directly
+  };
+
+  // Calculate nutrition values based on grams
+  const calculateNutrition = (per100gValue, grams) => {
+    return Math.round((per100gValue || 0) * (grams / 100));
   };
 
   return (
@@ -676,29 +679,28 @@ const FoodItem = ({ food, onAdd, disabled }) => {
             </span>
           )}
           
-          {/* Quantity selector */}
+          {/* Gram input */}
           <div className="flex items-center space-x-2 mt-2">
             <input
               type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
-              className="w-14 sm:w-16 bg-zinc-800 rounded px-2 py-1 text-xs sm:text-sm"
-              step="0.1"
-              min="0.1"
+              value={grams}
+              onChange={(e) => setGrams(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-16 sm:w-20 bg-zinc-800 rounded px-2 py-1 text-xs sm:text-sm text-center"
+              min="1"
             />
-            <span className="text-xs sm:text-sm text-gray-400">{unit}</span>
+            <span className="text-xs sm:text-sm text-gray-400">grams</span>
           </div>
         </div>
         
         <div className="flex sm:flex-col justify-between sm:text-right sm:items-end">
           <div className="flex flex-col">
             <p className="text-lime-500 font-bold mb-1 text-sm sm:text-base">
-              {Math.round((food.calories || 0) * quantity)} cal
+              {calculateNutrition(food.calories, grams)} cal
             </p>
             <div className="flex space-x-2 sm:space-x-3 text-xs text-gray-400 mb-2 sm:mb-3">
-              <span>P: {Math.round((food.protein || 0) * quantity)}g</span>
-              <span>C: {Math.round((food.carbs || 0) * quantity)}g</span>
-              <span>F: {Math.round((food.fat || 0) * quantity)}g</span>
+              <span>P: {calculateNutrition(food.protein, grams)}g</span>
+              <span>C: {calculateNutrition(food.carbs, grams)}g</span>
+              <span>F: {calculateNutrition(food.fat, grams)}g</span>
             </div>
           </div>
           
