@@ -53,7 +53,7 @@ function AppWithChatBubble() {
         
         {/* Protected routes - require authentication */}
         <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/user-details" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
+        <Route path="/userprofile/:userId" element={<ProtectedRoute><UserDetails /></ProtectedRoute>} />
         <Route path="/workout-categories" element={<ProtectedRoute><WorkoutCategories /></ProtectedRoute>} />
         <Route path="/exercises" element={<ProtectedRoute><ExerciseList /></ProtectedRoute>} />
         <Route path="/trainers" element={<ProtectedRoute><TrainersList /></ProtectedRoute>} />

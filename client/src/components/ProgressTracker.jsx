@@ -201,6 +201,17 @@ export default function ProgressTracker() {
     }
   };
 
+    if (!userId) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
+          <p>Loading Progress Tracker...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Load the current user ID and finished workouts
   useEffect(() => {
     if (userId) {
